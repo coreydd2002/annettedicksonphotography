@@ -1,0 +1,46 @@
+.placeholder-image {
+  width: 100%;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+div.placeholder-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-white);
+  text-align: center;
+  padding: 12px;
+}
+
+.placeholder-image-icon {
+  width: 28px;
+  height: 28px;
+  opacity: 0.8;
+}
+
+.placeholder-image-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.placeholder-image-variant-0 {
+  background: linear-gradient(150deg, #2a2730, #1a1a1a 60%, #493d59);
+}
+.placeholder-image-variant-1 {
+  background: linear-gradient(150deg, #8c74ac, #1a1a1a 75%);
+}
+.placeholder-image-variant-2 {
+  background: linear-gradient(150deg, #4b4552, #726c77 50%, #1a1a1a);
+}
+.placeholder-image-variant-3 {
+  background: linear-gradient(150deg, #1a1a1a, #8c74ac 80%, #1a1a1a);
+}
+.placeholder-image-variant-4 {
+  background: linear-gradient(150deg, #726c77, #493d59 55%, #1a1a1a);
+}

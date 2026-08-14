@@ -1,0 +1,10 @@
+main {
+  padding-top: var(--header-height);
+  min-height: 60vh;
+}
+
+@media (max-width: 768px) {
+  main {
+    padding-top: var(--header-height-mobile);
+  }
+}
