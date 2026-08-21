@@ -1,4 +1,5 @@
-const TO_EMAIL = "lorenandannette@gmail.com";
+// TODO: switch back to lorenandannette@gmail.com once live testing is done.
+const TO_EMAIL = "coreydd2002@gmail.com";
 const FROM_EMAIL = "Notice <Notice@annettedickson.photography>";
 
 const FIELD_LABELS = {
