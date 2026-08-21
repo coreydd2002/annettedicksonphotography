@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { FORMSPREE_ENDPOINT } from "../../config";
 import { CornerFlourish } from "../../components/decorations";
 import "./BookNow.css";
 
@@ -21,10 +20,11 @@ export default function BookNow() {
     setStatus("submitting");
 
     try {
-      const response = await fetch(FORMSPREE_ENDPOINT, {
+      const data = Object.fromEntries(new FormData(form));
+      const response = await fetch("/api/contact", {
         method: "POST",
-        headers: { Accept: "application/json" },
-        body: new FormData(form),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
       setStatus(response.ok ? "success" : "error");

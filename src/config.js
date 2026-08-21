@@ -1,6 +1,3 @@
-// TODO: replace with the real Formspree form ID before launch.
-export const FORMSPREE_ENDPOINT = "https://formspree.io/f/PLACEHOLDER";
-
 export const NAV_LINKS = [
   { label: "Home", to: "/" },
   { label: "Galleries", to: "/galleries" },
