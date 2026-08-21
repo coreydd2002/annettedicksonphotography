@@ -3,3 +3,4 @@ export { default as IconClose } from "./IconClose";
 export { default as IconChevronLeft } from "./IconChevronLeft";
 export { default as IconChevronRight } from "./IconChevronRight";
 export { default as IconImage } from "./IconImage";
+export { default as IconInstagram } from "./IconInstagram";

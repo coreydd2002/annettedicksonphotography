@@ -4,6 +4,12 @@
   overflow: hidden;
 }
 
+img.placeholder-image {
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 div.placeholder-image {
   display: flex;
   flex-direction: column;

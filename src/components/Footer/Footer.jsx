@@ -1,40 +1,44 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FloralDivider } from "../decorations";
-import { NAV_LINKS, SITE } from "../../config";
+import { IconInstagram } from "../icons";
+import { SITE } from "../../config";
 import "./Footer.css";
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { pathname } = useLocation();
+  const isBookNowPage = pathname === "/book-now";
 
   return (
     <footer className="site-footer">
       <div className="container footer-inner">
-        <span className="footer-brand">{SITE.brandName}</span>
+        {!isBookNowPage && (
+          <>
+            <h2 className="footer-cta-heading">Ready to Book Your Session?</h2>
 
-        <ul className="footer-links">
-          {NAV_LINKS.map((link) => (
-            <li key={link.to}>
-              <Link to={link.to}>{link.label}</Link>
-            </li>
-          ))}
-        </ul>
+            <Link to="/book-now" className="btn footer-cta-btn">
+              Book Now
+            </Link>
+          </>
+        )}
 
-        <div className="footer-contact">
-          <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
-          <a href={`tel:${SITE.phone.replace(/[^+\d]/g, "")}`}>{SITE.phone}</a>
-          <a href={SITE.instagram} target="_blank" rel="noreferrer">
-            Instagram
+        <div className="footer-brand-row">
+          <span className="footer-brand">{SITE.brandName}</span>
+
+          <a href={SITE.instagram} target="_blank" rel="noreferrer" className="footer-instagram">
+            <IconInstagram className="footer-contact-icon" />
+            @annettedickson.photo
           </a>
         </div>
 
         <div className="divider-row">
           <FloralDivider />
         </div>
-
-        <p className="footer-copyright">
-          © {year} {SITE.brandName} {SITE.brandSuffix}. All rights reserved.
-        </p>
       </div>
+
+      <p className="footer-copyright">
+        © {year} {SITE.brandName} {SITE.brandSuffix}. All rights reserved.
+      </p>
     </footer>
   );
 }

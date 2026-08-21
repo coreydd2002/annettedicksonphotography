@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV_LINKS, SITE } from "../../config";
 import { WooshLine } from "../decorations";
-import { IconMenu, IconClose } from "../icons";
+import { IconMenu, IconClose, IconInstagram } from "../icons";
 import "./Header.css";
 
 export default function Header() {
@@ -36,27 +36,39 @@ export default function Header() {
           <WooshLine className="brand-flourish" />
         </NavLink>
 
-        <nav className="site-nav" aria-label="Primary">
-          <ul>
-            {NAV_LINKS.map((link) => (
-              <li key={link.to}>
-                <NavLink to={link.to} end={link.to === "/"} className={navLinkClass}>
-                  {link.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div className="header-right">
+          <nav className="site-nav" aria-label="Primary">
+            <ul>
+              {NAV_LINKS.map((link) => (
+                <li key={link.to}>
+                  <NavLink to={link.to} end={link.to === "/"} className={navLinkClass}>
+                    {link.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-        <button
-          type="button"
-          className="menu-toggle"
-          aria-label="Toggle navigation"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <IconClose /> : <IconMenu />}
-        </button>
+          <a
+            href={SITE.instagram}
+            target="_blank"
+            rel="noreferrer"
+            className="header-instagram-btn"
+            aria-label="Instagram"
+          >
+            <IconInstagram className="header-instagram-icon" />
+          </a>
+
+          <button
+            type="button"
+            className="menu-toggle"
+            aria-label="Toggle navigation"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <IconClose /> : <IconMenu />}
+          </button>
+        </div>
       </div>
 
       <div className={`mobile-nav ${menuOpen ? "open" : ""}`}>

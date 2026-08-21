@@ -9,5 +9,5 @@ export const SITE = {
   brandSuffix: "Photography",
   email: "hello@annettedickson.photography",
   phone: "(555) 012-3456",
-  instagram: "https://instagram.com/annettedicksonphotography",
+  instagram: "https://www.instagram.com/annettedickson.photo",
 };

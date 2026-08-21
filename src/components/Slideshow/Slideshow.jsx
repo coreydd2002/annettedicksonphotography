@@ -31,6 +31,8 @@ export default function Slideshow({ slides, interval = 5000 }) {
         {slides.map((slide, index) => (
           <PlaceholderImage
             key={slide.id}
+            src={slide.src}
+            alt={slide.heading}
             variant={slide.variant}
             aspect="auto"
             showIcon={false}

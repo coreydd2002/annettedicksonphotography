@@ -2,13 +2,25 @@ import { Link } from "react-router-dom";
 import Slideshow from "../../components/Slideshow/Slideshow";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import { FloralDivider } from "../../components/decorations";
+import { IconInstagram } from "../../components/icons";
 import slides from "../../data/slides";
+import { SITE } from "../../config";
 import "./Home.css";
 
 const CATEGORIES = [
-  { slug: "wedding", label: "Wedding", variant: 1 },
-  { slug: "portrait", label: "Portrait", variant: 2 },
-  { slug: "product", label: "Product", variant: 3 },
+  { slug: "wedding", label: "Wedding", variant: 1, src: "/rings.webp" },
+  {
+    slug: "portrait",
+    label: "Portrait",
+    variant: 2,
+    src: "/2022.05.26_sarah-wallace-360.webp",
+  },
+  {
+    slug: "product",
+    label: "Product",
+    variant: 3,
+    src: "/reset-your-nest-web-size-straightened-2-2.webp",
+  },
 ];
 
 export default function Home() {
@@ -22,12 +34,16 @@ export default function Home() {
 
       <section className="section about-section">
         <div className="container about-grid">
-          <PlaceholderImage
-            aspect="4 / 5"
-            variant={4}
-            label="Annette Dickson"
-            className="about-portrait"
-          />
+          <div className="about-portrait-frame">
+            <PlaceholderImage
+              src="/me-60-2.webp"
+              alt="Annette Dickson"
+              aspect="4 / 5"
+              variant={4}
+              label="Annette Dickson"
+              className="about-portrait"
+            />
+          </div>
           <div className="about-copy">
             <span className="eyebrow">Meet Annette</span>
             <h2>A Quiet Eye For Real Moments</h2>
@@ -41,9 +57,15 @@ export default function Home() {
               Based on location, available for travel, and always happy to
               talk through your vision before we begin.
             </p>
-            <Link to="/book-now" className="about-cta">
-              Let's Capture Your Story →
-            </Link>
+            <a
+              href={SITE.instagram}
+              target="_blank"
+              rel="noreferrer"
+              className="about-cta"
+            >
+              <IconInstagram className="about-cta-icon" />
+              Come and See @annettedickson.photo →
+            </a>
           </div>
         </div>
       </section>
@@ -57,8 +79,20 @@ export default function Home() {
                 to={`/galleries?category=${category.slug}`}
                 className="category-card"
               >
-                <PlaceholderImage aspect="4 / 5" variant={category.variant} />
-                <span className="category-card-label">{category.label}</span>
+                <div className="category-card-frame">
+                  <div className="category-card-photo">
+                    <PlaceholderImage
+                      src={category.src}
+                      alt={category.src ? category.label : ""}
+                      aspect="4 / 5"
+                      variant={category.variant}
+                      className="category-card-image"
+                    />
+                    <span className="category-card-label">
+                      {category.label}
+                    </span>
+                  </div>
+                </div>
               </Link>
             ))}
           </div>
@@ -68,19 +102,6 @@ export default function Home() {
       <div className="divider-row">
         <FloralDivider />
       </div>
-
-      <section className="cta-band">
-        <div className="container cta-band-inner">
-          <h2>Ready to Book Your Session?</h2>
-          <p>
-            Let's find a date and talk through the details — I'd love to hear
-            your story.
-          </p>
-          <Link to="/book-now" className="btn btn-primary">
-            Book Now
-          </Link>
-        </div>
-      </section>
     </>
   );
 }

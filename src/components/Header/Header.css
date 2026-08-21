@@ -48,10 +48,43 @@
   color: var(--color-lavender);
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
 .site-nav ul {
   display: flex;
   align-items: center;
   gap: 40px;
+}
+
+.header-instagram-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-lavender-dark);
+  transition: color 0.2s ease;
+}
+
+.header-instagram-btn:hover,
+.header-instagram-btn:focus-visible {
+  color: var(--color-ink);
+}
+
+.header-instagram-icon {
+  width: 30px;
+  height: 30px;
+}
+
+@media (min-width: 769px) {
+  .header-instagram-btn {
+    position: absolute;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+  }
 }
 
 .nav-link {

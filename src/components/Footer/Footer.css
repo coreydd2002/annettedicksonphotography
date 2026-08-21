@@ -1,7 +1,8 @@
 .site-footer {
+  position: relative;
   background: var(--color-ink);
   color: var(--color-paper);
-  padding: 56px 0 32px;
+  padding: 56px 0 28px;
   text-align: center;
 }
 
@@ -12,49 +13,53 @@
   gap: 18px;
 }
 
+.footer-cta-heading {
+  color: var(--color-white);
+  margin: 0;
+}
+
+.footer-cta-btn {
+  background: var(--color-lavender);
+  color: var(--color-ink);
+  border-color: var(--color-lavender);
+}
+
+.footer-cta-btn:hover,
+.footer-cta-btn:focus-visible {
+  background: transparent;
+  color: var(--color-lavender);
+}
+
+.footer-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
 .footer-brand {
   font-family: var(--font-script);
   font-size: 2rem;
   color: var(--color-white);
 }
 
-.footer-links {
-  display: flex;
-  gap: 28px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.footer-links a {
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-paper);
-  opacity: 0.85;
-  transition: color 0.2s ease, opacity 0.2s ease;
-}
-
-.footer-links a:hover {
-  color: var(--color-lavender);
-  opacity: 1;
-}
-
-.footer-contact {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 0.85rem;
-}
-
-.footer-contact a {
+.footer-instagram {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
   color: var(--color-lavender);
   transition: color 0.2s ease;
 }
 
-.footer-contact a:hover {
+.footer-instagram:hover {
   color: var(--color-white);
+}
+
+.footer-contact-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .footer-inner .divider-row {
@@ -62,6 +67,11 @@
 }
 
 .footer-copyright {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 10px;
+  text-align: left;
   font-size: 0.72rem;
   letter-spacing: 0.05em;
   color: var(--color-ink-soft);

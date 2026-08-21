@@ -3,24 +3,35 @@ const TO_EMAIL = "coreydd2002@gmail.com";
 const FROM_EMAIL = "Notice <Notice@annettedickson.photography>";
 
 const FIELD_LABELS = {
-  name: "Full Name",
+  firstName: "First Name",
+  lastName: "Last Name",
   email: "Email",
-  phone: "Phone",
-  sessionType: "Session Type",
+  phone: "Phone Number",
+  contactMethod: "Preferred Contact Method",
+  sessionType: "Photoshoot Type",
   date: "Preferred Date",
   location: "Location",
-  message: "Message / Details",
+  message: "Details",
 };
 const DETAIL_ORDER = [
-  "name",
+  "firstName",
+  "lastName",
   "email",
   "phone",
+  "contactMethod",
   "sessionType",
   "date",
   "location",
   "message",
 ];
-const REQUIRED_FIELDS = ["name", "email", "sessionType", "date"];
+const REQUIRED_FIELDS = ["firstName", "lastName", "contactMethod", "sessionType"];
+// Whichever field the chosen contact method depends on is required; the other
+// of email/phone is left optional, mirroring the form's own logic.
+const CONTACT_METHOD_REQUIRES = {
+  Text: "phone",
+  Call: "phone",
+  Email: "email",
+};
 
 function escapeHtml(value) {
   return String(value)
@@ -45,13 +56,26 @@ export default async function handler(req, res) {
     }
   }
 
+  const requiredContactField = CONTACT_METHOD_REQUIRES[body.contactMethod];
+  if (!requiredContactField) {
+    return res.status(400).json({ error: "Preferred Contact Method is invalid" });
+  }
+  if (
+    typeof body[requiredContactField] !== "string" ||
+    !body[requiredContactField].trim()
+  ) {
+    return res.status(400).json({
+      error: `${FIELD_LABELS[requiredContactField]} is required for ${body.contactMethod.toLowerCase()} contact`,
+    });
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("contact: RESEND_API_KEY is not configured");
     return res.status(500).json({ error: "Server is not configured correctly" });
   }
 
-  const name = body.name.trim();
+  const name = `${body.firstName.trim()} ${body.lastName.trim()}`;
   const details = DETAIL_ORDER.map((field) => ({
     label: FIELD_LABELS[field],
     value: typeof body[field] === "string" ? body[field].trim() : "",
