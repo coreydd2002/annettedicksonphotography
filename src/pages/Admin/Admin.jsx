@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
-import { IconEye, IconEyeOff } from "../../components/icons";
+import { IconDragHandle, IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import { detectImageAspect, fileToDataUrl, MAX_IMAGE_BYTES } from "./utils";
 import "./Admin.css";
@@ -39,6 +39,25 @@ function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
+// Splices a reordered view of one category's items back into their original
+// slots in the full manifest order, leaving other categories' positions
+// untouched. When activeFilter is "all", newVisibleOrder already IS the full
+// order.
+function applyReorder(items, activeFilter, newVisibleOrder) {
+  if (activeFilter === "all") {
+    return newVisibleOrder;
+  }
+  const visibleIndices = [];
+  items.forEach((item, index) => {
+    if (item.category === activeFilter) visibleIndices.push(index);
+  });
+  const next = [...items];
+  visibleIndices.forEach((index, position) => {
+    next[index] = newVisibleOrder[position];
+  });
+  return next;
+}
+
 export default function Admin() {
   const [session, setSession] = useState(() => readSession());
   const isAuthenticated = Boolean(session);
@@ -52,6 +71,12 @@ export default function Admin() {
   const [listStatus, setListStatus] = useState("idle");
   const [activeFilter, setActiveFilter] = useState("all");
   const [deletingIds, setDeletingIds] = useState(() => new Set());
+  const savedItemsRef = useRef([]);
+
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [reorderStatus, setReorderStatus] = useState("idle"); // idle | saving | error
+  const [reorderError, setReorderError] = useState("");
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("wedding");
@@ -87,7 +112,11 @@ export default function Admin() {
       const response = await authFetch("/api/admin/list");
       if (!response.ok) throw new Error("Failed to load gallery list");
       const data = await response.json();
-      setItems(data.items || []);
+      const loaded = data.items || [];
+      setItems(loaded);
+      savedItemsRef.current = loaded;
+      setReorderStatus("idle");
+      setReorderError("");
       setListStatus("idle");
     } catch {
       setListStatus("error");
@@ -236,6 +265,9 @@ export default function Admin() {
       });
       if (response.ok) {
         setItems((prev) => prev.filter((existing) => existing.id !== item.id));
+        savedItemsRef.current = savedItemsRef.current.filter(
+          (existing) => existing.id !== item.id,
+        );
       }
     } finally {
       setDeletingIds((prev) => {
@@ -250,6 +282,84 @@ export default function Admin() {
     activeFilter === "all"
       ? items
       : items.filter((item) => item.category === activeFilter);
+
+  const isOrderDirty =
+    items.map((item) => String(item.id)).join("|") !==
+    savedItemsRef.current.map((item) => String(item.id)).join("|");
+
+  const handleDragStart = (event, id) => {
+    setDraggedId(id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(id));
+  };
+
+  const handleDragOver = (event, id) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (id !== draggedId && dragOverId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragLeave = (id) => {
+    setDragOverId((current) => (current === id ? null : current));
+  };
+
+  const handleDrop = (event, targetId) => {
+    event.preventDefault();
+    setDragOverId(null);
+
+    const sourceId = draggedId;
+    setDraggedId(null);
+    if (sourceId == null || sourceId === targetId) return;
+
+    const fromIndex = visibleItems.findIndex((item) => item.id === sourceId);
+    const toIndex = visibleItems.findIndex((item) => item.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const reorderedVisible = [...visibleItems];
+    const [moved] = reorderedVisible.splice(fromIndex, 1);
+    reorderedVisible.splice(toIndex, 0, moved);
+
+    setItems((prevItems) => applyReorder(prevItems, activeFilter, reorderedVisible));
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleSaveOrder = async () => {
+    setReorderStatus("saving");
+    setReorderError("");
+
+    try {
+      const response = await authFetch("/api/admin/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: items.map((item) => item.id) }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setReorderStatus("error");
+        setReorderError(data.error || "Could not save the new order — please try again.");
+        return;
+      }
+
+      savedItemsRef.current = items;
+      setReorderStatus("idle");
+    } catch {
+      setReorderStatus("error");
+      setReorderError("Could not save the new order — please try again.");
+    }
+  };
+
+  const handleDiscardOrder = () => {
+    setItems(savedItemsRef.current);
+    setReorderStatus("idle");
+    setReorderError("");
+  };
 
   if (!isAuthenticated) {
     return (
@@ -438,38 +548,92 @@ export default function Admin() {
               </p>
             )}
 
+            {reorderStatus === "error" && (
+              <p className="form-banner form-banner-error" role="alert">
+                {reorderError}
+              </p>
+            )}
+
+            {isOrderDirty && (
+              <div className="admin-reorder-bar">
+                <span className="admin-reorder-message">
+                  {reorderStatus === "saving"
+                    ? "Saving new order…"
+                    : "Photo order changed."}
+                </span>
+                <div className="admin-reorder-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleDiscardOrder}
+                    disabled={reorderStatus === "saving"}
+                  >
+                    Discard
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleSaveOrder}
+                    disabled={reorderStatus === "saving"}
+                  >
+                    {reorderStatus === "saving" ? "Saving…" : "Save Order"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {listStatus === "loading" && items.length === 0 ? (
               <p className="admin-empty">Loading…</p>
             ) : visibleItems.length === 0 ? (
               <p className="admin-empty">No photos in this category yet.</p>
             ) : (
-              <ul className="admin-photo-list">
-                {visibleItems.map((item) => (
-                  <li key={item.id} className="admin-photo-card">
-                    <PlaceholderImage
-                      src={item.src}
-                      alt={item.title}
-                      variant={item.variant}
-                      aspect={item.aspect}
-                      className="admin-photo-thumb"
-                    />
-                    <div className="admin-photo-meta">
-                      <span className="admin-photo-title">{item.title}</span>
-                      <span className="admin-photo-category">
-                        {item.category}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-outline admin-delete-btn"
-                      onClick={() => handleDelete(item)}
-                      disabled={deletingIds.has(item.id)}
+              <>
+                <p className="admin-list-hint">
+                  Drag a photo to reorder it, then save.
+                </p>
+                <ul className="admin-photo-list">
+                  {visibleItems.map((item) => (
+                    <li
+                      key={item.id}
+                      className={`admin-photo-card ${
+                        draggedId === item.id ? "dragging" : ""
+                      } ${dragOverId === item.id ? "drag-over" : ""}`}
+                      draggable
+                      onDragStart={(event) => handleDragStart(event, item.id)}
+                      onDragOver={(event) => handleDragOver(event, item.id)}
+                      onDragLeave={() => handleDragLeave(item.id)}
+                      onDrop={(event) => handleDrop(event, item.id)}
+                      onDragEnd={handleDragEnd}
                     >
-                      {deletingIds.has(item.id) ? "Deleting…" : "Delete"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <span className="admin-drag-handle" aria-label="Drag to reorder">
+                        <IconDragHandle />
+                      </span>
+                      <PlaceholderImage
+                        src={item.src}
+                        alt={item.title}
+                        variant={item.variant}
+                        aspect={item.aspect}
+                        draggable={false}
+                        className="admin-photo-thumb"
+                      />
+                      <div className="admin-photo-meta">
+                        <span className="admin-photo-title">{item.title}</span>
+                        <span className="admin-photo-category">
+                          {item.category}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline admin-delete-btn"
+                        onClick={() => handleDelete(item)}
+                        disabled={deletingIds.has(item.id)}
+                      >
+                        {deletingIds.has(item.id) ? "Deleting…" : "Delete"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </div>

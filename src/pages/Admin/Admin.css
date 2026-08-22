@@ -264,6 +264,40 @@
   font-size: 0.9rem;
 }
 
+.admin-reorder-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--color-lavender-pale);
+  border: 1px solid var(--color-lavender);
+  border-radius: 2px;
+}
+
+.admin-reorder-message {
+  font-size: 0.85rem;
+  color: var(--color-ink);
+}
+
+.admin-reorder-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.admin-reorder-actions .btn {
+  padding: 8px 18px;
+  font-size: 0.72rem;
+}
+
+.admin-list-hint {
+  font-size: 0.78rem;
+  color: var(--color-ink-soft);
+  margin: 0 0 14px;
+}
+
 .admin-photo-list {
   display: flex;
   flex-direction: column;
@@ -277,6 +311,36 @@
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: 2px;
+  background: var(--color-white);
+  transition: opacity 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-photo-card.dragging {
+  opacity: 0.4;
+}
+
+.admin-photo-card.drag-over {
+  border-color: var(--color-lavender-dark);
+  background: var(--color-lavender-pale);
+}
+
+.admin-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex-shrink: 0;
+  color: var(--color-ink-soft);
+  cursor: grab;
+}
+
+.admin-drag-handle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-photo-card.dragging .admin-drag-handle {
+  cursor: grabbing;
 }
 
 .admin-photo-thumb {

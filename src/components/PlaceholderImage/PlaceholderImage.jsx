@@ -9,6 +9,7 @@ export default function PlaceholderImage({
   variant = 0,
   label,
   showIcon = true,
+  draggable,
   className = "",
 }) {
   const [failed, setFailed] = useState(false);
@@ -27,6 +28,7 @@ export default function PlaceholderImage({
         src={src}
         alt={alt}
         loading="lazy"
+        draggable={draggable}
         className={`placeholder-image ${className}`}
         style={{ aspectRatio: aspect }}
         onError={() => setFailed(true)}
