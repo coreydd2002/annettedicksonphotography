@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
+import { IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import { detectImageAspect, fileToDataUrl, MAX_IMAGE_BYTES } from "./utils";
 import "./Admin.css";
@@ -43,6 +44,7 @@ export default function Admin() {
   const isAuthenticated = Boolean(session);
 
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loginStatus, setLoginStatus] = useState("idle");
   const [loginError, setLoginError] = useState("");
 
@@ -272,14 +274,25 @@ export default function Admin() {
             <form className="admin-login-form" onSubmit={handleLogin}>
               <div className="form-row">
                 <label htmlFor="admin-password">Password</label>
-                <input
-                  id="admin-password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="password-field">
+                  <input
+                    id="admin-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword((show) => !show)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <IconEyeOff /> : <IconEye />}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
