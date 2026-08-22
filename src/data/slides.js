@@ -3,7 +3,7 @@ const slides = [
     id: 1,
     eyebrow: "Wedding Photography",
     heading: "Every Vow, Every Glance, Remembered",
-    src: "/zach-and-marie-sealing-888.webp",
+    src: "/zach-and-marie-sealing-1027.jpg",
     variant: 1,
   },
   {
