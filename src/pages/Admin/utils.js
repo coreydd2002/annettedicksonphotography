@@ -2,6 +2,13 @@
 // since client and serverless code aren't bundled together.
 export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
+// Set in sessionStorage the moment a publish succeeds, and consumed by
+// App.jsx on the next full page load to redirect to Home. A hard refresh
+// remounts the whole app, wiping React state, so the "we just redeployed"
+// signal has to live somewhere that survives that — sessionStorage does,
+// and clears itself once the tab closes.
+export const REDEPLOY_REDIRECT_KEY = "adp_redeploy_redirect_pending";
+
 function gcd(a, b) {
   return b === 0 ? a : gcd(b, a % b);
 }

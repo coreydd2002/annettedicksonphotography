@@ -53,6 +53,19 @@
   margin-bottom: 32px;
 }
 
+.slideshow-content .slideshow-cta {
+  background: var(--color-lavender);
+  color: var(--color-ink);
+  border-color: var(--color-lavender);
+}
+
+.slideshow-content .slideshow-cta:hover,
+.slideshow-content .slideshow-cta:focus-visible {
+  background: var(--color-ink);
+  color: var(--color-white);
+  border-color: var(--color-ink);
+}
+
 .slideshow-dots {
   position: absolute;
   bottom: 36px;

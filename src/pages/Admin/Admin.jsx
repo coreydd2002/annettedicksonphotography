@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
 import { IconDragHandle, IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
-import { detectImageAspect, fileToDataUrl, MAX_IMAGE_BYTES } from "./utils";
+import {
+  detectImageAspect,
+  fileToDataUrl,
+  MAX_IMAGE_BYTES,
+  REDEPLOY_REDIRECT_KEY,
+} from "./utils";
 import "./Admin.css";
 
 const SESSION_KEY = "adp_admin_token";
@@ -348,6 +353,7 @@ export default function Admin() {
         return;
       }
 
+      sessionStorage.setItem(REDEPLOY_REDIRECT_KEY, "1");
       setPublishStatus("done");
     } catch {
       setPublishStatus("error");

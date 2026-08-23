@@ -48,7 +48,7 @@ export default function Slideshow({ slides, interval = 5000 }) {
       <div className="slideshow-content container">
         <span className="eyebrow">{current.eyebrow}</span>
         <h1 className="slideshow-heading">{current.heading}</h1>
-        <Link to="/book-now" className="btn btn-primary">
+        <Link to="/book-now" className="btn btn-primary slideshow-cta">
           Book a Session
         </Link>
       </div>
