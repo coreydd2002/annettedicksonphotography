@@ -9,6 +9,13 @@ export default function Footer() {
   const { pathname } = useLocation();
   const isBookNowPage = pathname === "/book-now";
 
+  // The admin dashboard manages its own fixed-height, independently-scrolling
+  // layout (only the photo list scrolls) — a footer below it would break
+  // that and doesn't belong on an internal tool anyway.
+  if (pathname === "/admin") {
+    return null;
+  }
+
   return (
     <footer className="site-footer">
       <div className="container footer-inner">

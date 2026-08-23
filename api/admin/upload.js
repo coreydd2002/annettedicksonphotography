@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { checkAuthHeader } from "../_lib/auth.js";
-import { getManifest, putFile, putManifest } from "../_lib/github.js";
+import { putFile } from "../_lib/github.js";
 
 const CATEGORIES = new Set(["wedding", "portrait", "product"]);
 const MIME_EXTENSIONS = {
@@ -26,6 +26,13 @@ function slugify(value) {
   return slug || "photo";
 }
 
+// This only commits the image file — it does NOT touch content/gallery.json.
+// The admin page stages new photos locally (so they show up in "Current
+// Photos" immediately) and only writes the manifest when "Save and Redeploy"
+// is clicked (see publish.js). That keeps each upload request small (well
+// under Vercel's body-size limit even if several photos are added in one
+// sitting) and means the public site's content doesn't actually change until
+// the admin explicitly publishes.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -84,26 +91,8 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("upload: failed to commit image", error);
-    return res.status(502).json({
-      error: "Failed to upload the image to GitHub",
-      step: "image-upload-failed",
-    });
+    return res.status(502).json({ error: "Failed to upload the image to GitHub" });
   }
 
-  const item = { id, category, title: trimmedTitle, aspect, src };
-
-  try {
-    const { items, sha } = await getManifest();
-    items.push(item);
-    await putManifest(items, sha, `Update gallery manifest: add ${trimmedTitle}`);
-  } catch (error) {
-    console.error("upload: failed to update manifest", error);
-    return res.status(502).json({
-      error:
-        "The photo uploaded but the gallery list failed to update — please retry.",
-      step: "manifest-update-failed",
-    });
-  }
-
-  return res.status(201).json({ item });
+  return res.status(201).json({ item: { id, category, title: trimmedTitle, aspect, src } });
 }

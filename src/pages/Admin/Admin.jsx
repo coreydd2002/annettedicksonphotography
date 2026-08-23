@@ -58,6 +58,15 @@ function applyReorder(items, activeFilter, newVisibleOrder) {
   return next;
 }
 
+function submitOnEnter(handler) {
+  return (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handler(event);
+    }
+  };
+}
+
 export default function Admin() {
   const [session, setSession] = useState(() => readSession());
   const isAuthenticated = Boolean(session);
@@ -70,13 +79,13 @@ export default function Admin() {
   const [items, setItems] = useState([]);
   const [listStatus, setListStatus] = useState("idle");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [deletingIds, setDeletingIds] = useState(() => new Set());
   const savedItemsRef = useRef([]);
 
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
-  const [reorderStatus, setReorderStatus] = useState("idle"); // idle | saving | error
-  const [reorderError, setReorderError] = useState("");
+
+  const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
+  const [publishError, setPublishError] = useState("");
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("wedding");
@@ -115,8 +124,6 @@ export default function Admin() {
       const loaded = data.items || [];
       setItems(loaded);
       savedItemsRef.current = loaded;
-      setReorderStatus("idle");
-      setReorderError("");
       setListStatus("idle");
     } catch {
       setListStatus("error");
@@ -210,6 +217,9 @@ export default function Admin() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Commits the image file right away (so it exists, small request, one at a
+  // time) and adds it to the local staged list. The public site doesn't
+  // change until "Save and Redeploy" writes the manifest.
   const handleUpload = async (event) => {
     event.preventDefault();
 
@@ -242,40 +252,25 @@ export default function Admin() {
         return;
       }
 
+      setItems((prev) => [...prev, data.item]);
       setUploadStatus("success");
       resetUploadForm();
-      loadItems();
     } catch {
       setUploadStatus("error");
       setUploadError("Something went wrong — please try again.");
     }
   };
 
-  const handleDelete = async (item) => {
-    if (!window.confirm(`Delete "${item.title}"? This can't be undone.`)) {
+  // Purely local — nothing is deleted on GitHub until "Save and Redeploy".
+  const handleDelete = (item) => {
+    if (
+      !window.confirm(
+        `Remove "${item.title}" from the gallery? This won't take effect until you Save and Redeploy.`,
+      )
+    ) {
       return;
     }
-
-    setDeletingIds((prev) => new Set(prev).add(item.id));
-    try {
-      const response = await authFetch("/api/admin/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: item.id }),
-      });
-      if (response.ok) {
-        setItems((prev) => prev.filter((existing) => existing.id !== item.id));
-        savedItemsRef.current = savedItemsRef.current.filter(
-          (existing) => existing.id !== item.id,
-        );
-      }
-    } finally {
-      setDeletingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
-    }
+    setItems((prev) => prev.filter((existing) => existing.id !== item.id));
   };
 
   const visibleItems =
@@ -283,7 +278,7 @@ export default function Admin() {
       ? items
       : items.filter((item) => item.category === activeFilter);
 
-  const isOrderDirty =
+  const hasPendingChanges =
     items.map((item) => String(item.id)).join("|") !==
     savedItemsRef.current.map((item) => String(item.id)).join("|");
 
@@ -329,36 +324,35 @@ export default function Admin() {
     setDragOverId(null);
   };
 
-  const handleSaveOrder = async () => {
-    setReorderStatus("saving");
-    setReorderError("");
+  const handleDiscardAll = () => {
+    setItems(savedItemsRef.current);
+    setPublishStatus("idle");
+    setPublishError("");
+  };
+
+  const handlePublish = async () => {
+    setPublishStatus("saving");
+    setPublishError("");
 
     try {
-      const response = await authFetch("/api/admin/reorder", {
+      const response = await authFetch("/api/admin/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds: items.map((item) => item.id) }),
+        body: JSON.stringify({ items }),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        setReorderStatus("error");
-        setReorderError(data.error || "Could not save the new order — please try again.");
+        setPublishStatus("error");
+        setPublishError(data.error || "Could not save changes — please try again.");
         return;
       }
 
-      savedItemsRef.current = items;
-      setReorderStatus("idle");
+      setPublishStatus("done");
     } catch {
-      setReorderStatus("error");
-      setReorderError("Could not save the new order — please try again.");
+      setPublishStatus("error");
+      setPublishError("Could not save changes — please try again.");
     }
-  };
-
-  const handleDiscardOrder = () => {
-    setItems(savedItemsRef.current);
-    setReorderStatus("idle");
-    setReorderError("");
   };
 
   if (!isAuthenticated) {
@@ -390,6 +384,7 @@ export default function Admin() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
+                    onKeyDown={submitOnEnter(handleLogin)}
                     required
                     autoFocus
                   />
@@ -418,9 +413,24 @@ export default function Admin() {
     );
   }
 
+  if (publishStatus === "done") {
+    return (
+      <section className="section admin-section admin-redeploy-section">
+        <div className="container admin-redeploy-container">
+          <span className="eyebrow">Saved</span>
+          <h1>Redeploying…</h1>
+          <p>
+            Your changes are saved and the site is rebuilding. This usually
+            takes a minute or two — wait a bit, then refresh this page.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="section admin-section">
-      <div className="container">
+    <section className="section admin-section admin-dashboard-section">
+      <div className="container admin-dashboard-container">
         <div className="admin-header-row">
           <div>
             <span className="eyebrow">Admin</span>
@@ -432,85 +442,116 @@ export default function Admin() {
         </div>
 
         <div className="admin-grid">
-          <div className="admin-panel admin-upload-panel">
-            <h2>Add a Photo</h2>
+          <div className="admin-sidebar">
+            <div className="admin-panel admin-upload-panel">
+              <h2>Add a Photo</h2>
 
-            {uploadStatus === "success" && (
-              <p className="form-banner form-banner-success" role="status">
-                Saved — this will appear on the live gallery in about 1-2
-                minutes after the site rebuilds.
-              </p>
-            )}
-            {uploadStatus === "error" && (
-              <p className="form-banner form-banner-error" role="alert">
-                {uploadError}
-              </p>
-            )}
-
-            <form className="admin-upload-form" onSubmit={handleUpload}>
-              <div className="form-row">
-                <label htmlFor="admin-title">Title</label>
-                <input
-                  id="admin-title"
-                  type="text"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-row">
-                <label htmlFor="admin-category">Category</label>
-                <select
-                  id="admin-category"
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value)}
-                >
-                  {CATEGORIES.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-row">
-                <label htmlFor="admin-file">Photo</label>
-                <input
-                  id="admin-file"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  required
-                />
-              </div>
-
-              {fileError && <p className="admin-file-error">{fileError}</p>}
-
-              {previewUrl && (
-                <div className="admin-preview">
-                  <img
-                    src={previewUrl}
-                    alt="Selected preview"
-                    className="admin-preview-image"
-                  />
-                  <span className="admin-preview-aspect">
-                    Detected aspect ratio: {detectedAspect}
-                  </span>
-                </div>
+              {uploadStatus === "success" && (
+                <p className="form-banner form-banner-success" role="status">
+                  Added — it's in the list below. Click "Save and Redeploy"
+                  when you're done making changes.
+                </p>
+              )}
+              {uploadStatus === "error" && (
+                <p className="form-banner form-banner-error" role="alert">
+                  {uploadError}
+                </p>
               )}
 
+              <form className="admin-upload-form" onSubmit={handleUpload}>
+                <div className="form-row">
+                  <label htmlFor="admin-title">Title</label>
+                  <input
+                    id="admin-title"
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    onKeyDown={submitOnEnter(handleUpload)}
+                    required
+                  />
+                </div>
+
+                <div className="form-row">
+                  <label htmlFor="admin-category">Category</label>
+                  <select
+                    id="admin-category"
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                  >
+                    {CATEGORIES.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-row">
+                  <label htmlFor="admin-file">Photo</label>
+                  <input
+                    id="admin-file"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    required
+                  />
+                </div>
+
+                {fileError && <p className="admin-file-error">{fileError}</p>}
+
+                {previewUrl && (
+                  <div className="admin-preview">
+                    <img
+                      src={previewUrl}
+                      alt="Selected preview"
+                      className="admin-preview-image"
+                    />
+                    <span className="admin-preview-aspect">
+                      Detected aspect ratio: {detectedAspect}
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    uploadStatus === "submitting" || !file || Boolean(fileError)
+                  }
+                >
+                  {uploadStatus === "submitting" ? "Adding…" : "Add Photo"}
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-publish-panel">
+              {publishStatus === "error" && (
+                <p className="form-banner form-banner-error" role="alert">
+                  {publishError}
+                </p>
+              )}
+              {hasPendingChanges && (
+                <button
+                  type="button"
+                  className="admin-discard-link"
+                  onClick={handleDiscardAll}
+                  disabled={publishStatus === "saving"}
+                >
+                  Discard changes
+                </button>
+              )}
               <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={
-                  uploadStatus === "submitting" || !file || Boolean(fileError)
-                }
+                type="button"
+                className={`btn btn-primary admin-publish-btn ${
+                  hasPendingChanges ? "" : "is-faded"
+                }`}
+                onClick={handlePublish}
+                disabled={!hasPendingChanges || publishStatus === "saving"}
               >
-                {uploadStatus === "submitting" ? "Saving…" : "Save Photo"}
+                {publishStatus === "saving" ? "Saving & Redeploying…" : "Save and Redeploy"}
               </button>
-            </form>
+            </div>
           </div>
 
           <div className="admin-panel admin-list-panel">
@@ -548,40 +589,6 @@ export default function Admin() {
               </p>
             )}
 
-            {reorderStatus === "error" && (
-              <p className="form-banner form-banner-error" role="alert">
-                {reorderError}
-              </p>
-            )}
-
-            {isOrderDirty && (
-              <div className="admin-reorder-bar">
-                <span className="admin-reorder-message">
-                  {reorderStatus === "saving"
-                    ? "Saving new order…"
-                    : "Photo order changed."}
-                </span>
-                <div className="admin-reorder-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={handleDiscardOrder}
-                    disabled={reorderStatus === "saving"}
-                  >
-                    Discard
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={handleSaveOrder}
-                    disabled={reorderStatus === "saving"}
-                  >
-                    {reorderStatus === "saving" ? "Saving…" : "Save Order"}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {listStatus === "loading" && items.length === 0 ? (
               <p className="admin-empty">Loading…</p>
             ) : visibleItems.length === 0 ? (
@@ -589,7 +596,7 @@ export default function Admin() {
             ) : (
               <>
                 <p className="admin-list-hint">
-                  Drag a photo to reorder it, then save.
+                  Drag a photo to reorder it, then Save and Redeploy.
                 </p>
                 <ul className="admin-photo-list">
                   {visibleItems.map((item) => (
@@ -626,9 +633,8 @@ export default function Admin() {
                         type="button"
                         className="btn btn-outline admin-delete-btn"
                         onClick={() => handleDelete(item)}
-                        disabled={deletingIds.has(item.id)}
                       >
-                        {deletingIds.has(item.id) ? "Deleting…" : "Delete"}
+                        Delete
                       </button>
                     </li>
                   ))}
