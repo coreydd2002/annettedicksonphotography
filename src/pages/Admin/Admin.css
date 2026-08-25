@@ -55,6 +55,9 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  /* Wider than the site's public --container-width: with the edit drawer
+     open, three columns need more room than the public-facing pages do. */
+  max-width: 1440px;
 }
 
 .admin-header-row {
@@ -198,6 +201,12 @@
   gap: 40px;
   flex: 1;
   min-height: 0;
+}
+
+/* Room for the album edit drawer nudges the albums list narrower rather
+   than covering it. */
+.admin-grid.admin-grid-with-drawer {
+  grid-template-columns: minmax(0, 360px) 1fr minmax(0, 420px);
 }
 
 .admin-sidebar {
@@ -607,54 +616,30 @@
   color: var(--color-ink);
 }
 
-/* Album edit drawer */
-.admin-drawer {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-}
-
-.admin-drawer-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(26, 26, 26, 0.5);
-}
-
+/* Album edit drawer — an in-flow grid column (see .admin-grid-with-drawer),
+   not an overlay, so the rest of the page stays interactive while it's
+   open. Swapping which album it shows is just a prop/content change with no
+   transition. */
 .admin-drawer-panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(480px, 100vw);
-  background: var(--color-white);
-  padding: 32px;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  animation: admin-drawer-slide-in 0.25s ease;
 }
 
-@keyframes admin-drawer-slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.admin-drawer-save-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.admin-drawer-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: none;
-  border: none;
+.admin-drawer-save-row .btn {
+  flex: 1;
+}
+
+.admin-drawer-save-note {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
   color: var(--color-ink-soft);
-  cursor: pointer;
-  padding: 6px;
-}
-
-.admin-drawer-close:hover,
-.admin-drawer-close:focus-visible {
-  color: var(--color-ink);
 }
 
 .admin-drawer-title-input {
@@ -686,7 +671,7 @@
 
 .admin-drawer-delete-album {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 28px;
   border-color: #d9433a;
   color: #d9433a;
 }
@@ -817,7 +802,8 @@
     height: auto;
   }
 
-  .admin-grid {
+  .admin-grid,
+  .admin-grid.admin-grid-with-drawer {
     grid-template-columns: 1fr;
     min-height: 0;
   }
@@ -826,7 +812,8 @@
     overflow-y: visible;
   }
 
-  .admin-list-panel {
+  .admin-list-panel,
+  .admin-drawer-panel {
     overflow-y: visible;
   }
 }
@@ -842,10 +829,6 @@
 
   .admin-photo-card {
     flex-wrap: wrap;
-  }
-
-  .admin-drawer-panel {
-    padding: 24px 20px;
   }
 
   .admin-modal-panel {

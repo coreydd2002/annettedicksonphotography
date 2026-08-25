@@ -40,19 +40,14 @@ function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-// Splices a reordered view of one album's photos back into their original
-// slots in the full manifest order, leaving other albums' positions
-// untouched.
-function reorderAlbumPhotos(items, albumId, newOrder) {
-  const albumIndices = [];
-  items.forEach((item, index) => {
-    if (item.albumId === albumId) albumIndices.push(index);
-  });
-  const next = [...items];
-  albumIndices.forEach((index, position) => {
-    next[index] = newOrder[position];
-  });
-  return next;
+// Replaces one album's slice of the flat items array with its (possibly
+// reordered/renamed/added-to/deleted-from) draft version from the drawer.
+// Cross-album absolute position doesn't matter — every consumer filters by
+// albumId, which preserves each album's own relative order regardless of
+// where its items sit in the full array — so it's safe to just drop this
+// album's old entries and append the new ones.
+function applyAlbumPhotos(items, albumId, newAlbumPhotos) {
+  return [...items.filter((item) => item.albumId !== albumId), ...newAlbumPhotos];
 }
 
 function submitOnEnter(handler) {
@@ -83,6 +78,7 @@ export default function Admin() {
 
   const [expandedAlbumIds, setExpandedAlbumIds] = useState(() => new Set());
   const [editingAlbumId, setEditingAlbumId] = useState(null);
+  const [drawerIsDirty, setDrawerIsDirty] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
@@ -295,6 +291,35 @@ export default function Admin() {
   const requestConfirm = (options) => setConfirmDialog(options);
   const closeConfirm = () => setConfirmDialog(null);
 
+  const closeDrawer = () => {
+    setEditingAlbumId(null);
+    setDrawerIsDirty(false);
+  };
+
+  // Switching which album is open in the drawer discards that drawer's
+  // unsaved draft (it's about to be replaced) — so if it's dirty, confirm
+  // first. Re-clicking the album that's already open, or opening one while
+  // nothing was open, needs no confirmation.
+  const requestEditAlbum = (albumId) => {
+    if (editingAlbumId && editingAlbumId !== albumId && drawerIsDirty) {
+      const currentTitle =
+        albums.find((a) => a.id === editingAlbumId)?.title || "this album";
+      requestConfirm({
+        title: "Discard unsaved changes?",
+        message: `You have unsaved changes to "${currentTitle}". Switching albums will discard them.`,
+        confirmLabel: "Discard & Switch",
+        onConfirm: () => {
+          setEditingAlbumId(albumId);
+          setDrawerIsDirty(false);
+          closeConfirm();
+        },
+      });
+    } else {
+      setEditingAlbumId(albumId);
+      setDrawerIsDirty(false);
+    }
+  };
+
   const requestDeleteAlbum = (album) => {
     const photoCount = items.filter((item) => item.albumId === album.id).length;
     requestConfirm({
@@ -306,19 +331,7 @@ export default function Admin() {
       onConfirm: () => {
         setAlbums((prev) => prev.filter((a) => a.id !== album.id));
         setItems((prev) => prev.filter((item) => item.albumId !== album.id));
-        setEditingAlbumId(null);
-        closeConfirm();
-      },
-    });
-  };
-
-  const requestDeletePhoto = (photo) => {
-    requestConfirm({
-      title: "Delete photo?",
-      message: `Remove "${photo.title}" from the gallery? This won't take effect until you Save and Redeploy.`,
-      confirmLabel: "Delete Photo",
-      onConfirm: () => {
-        setItems((prev) => prev.filter((item) => item.id !== photo.id));
+        closeDrawer();
         closeConfirm();
       },
     });
@@ -331,9 +344,22 @@ export default function Admin() {
   const handleDiscardAll = () => {
     setItems(savedItemsRef.current);
     setAlbums(savedAlbumsRef.current);
-    setEditingAlbumId(null);
+    closeDrawer();
     setPublishStatus("idle");
     setPublishError("");
+  };
+
+  const requestDiscardAll = () => {
+    requestConfirm({
+      title: "Discard all changes?",
+      message:
+        "This will undo every add, edit, and delete you've made since the last publish.",
+      confirmLabel: "Discard Changes",
+      onConfirm: () => {
+        handleDiscardAll();
+        closeConfirm();
+      },
+    });
   };
 
   const handlePublish = async () => {
@@ -450,7 +476,7 @@ export default function Admin() {
           </button>
         </div>
 
-        <div className="admin-grid">
+        <div className={`admin-grid ${editingAlbum ? "admin-grid-with-drawer" : ""}`}>
           <div className="admin-sidebar">
             <div className="admin-panel admin-upload-panel">
               <h2>Add an Album</h2>
@@ -544,7 +570,7 @@ export default function Admin() {
                 <button
                   type="button"
                   className="admin-discard-link"
-                  onClick={handleDiscardAll}
+                  onClick={requestDiscardAll}
                   disabled={publishStatus === "saving"}
                 >
                   Discard changes
@@ -621,7 +647,7 @@ export default function Admin() {
                         <button
                           type="button"
                           className="admin-album-edit"
-                          onClick={() => setEditingAlbumId(album.id)}
+                          onClick={() => requestEditAlbum(album.id)}
                           aria-label={`Edit ${album.title}`}
                         >
                           <IconEdit />
@@ -655,33 +681,28 @@ export default function Admin() {
               </ul>
             )}
           </div>
+
+          {editingAlbum && (
+            <AlbumDrawer
+              key={editingAlbum.id}
+              album={editingAlbum}
+              photos={items.filter((item) => item.albumId === editingAlbum.id)}
+              authFetch={authFetch}
+              onClose={closeDrawer}
+              onDirtyChange={setDrawerIsDirty}
+              onRenameAlbum={(newTitle) =>
+                setAlbums((prev) =>
+                  prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
+                )
+              }
+              onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
+              onSavePhotos={(newAlbumPhotos) =>
+                setItems((prev) => applyAlbumPhotos(prev, editingAlbum.id, newAlbumPhotos))
+              }
+            />
+          )}
         </div>
       </div>
-
-      {editingAlbum && (
-        <AlbumDrawer
-          album={editingAlbum}
-          photos={items.filter((item) => item.albumId === editingAlbum.id)}
-          authFetch={authFetch}
-          onClose={() => setEditingAlbumId(null)}
-          onRenameAlbum={(newTitle) =>
-            setAlbums((prev) =>
-              prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
-            )
-          }
-          onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
-          onRenamePhoto={(photoId, newTitle) =>
-            setItems((prev) =>
-              prev.map((item) => (item.id === photoId ? { ...item, title: newTitle } : item)),
-            )
-          }
-          onDeletePhotoRequest={requestDeletePhoto}
-          onReorderPhotos={(newOrder) =>
-            setItems((prev) => reorderAlbumPhotos(prev, editingAlbum.id, newOrder))
-          }
-          onPhotoAdded={(item) => setItems((prev) => [...prev, item])}
-        />
-      )}
 
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} />}
     </section>
