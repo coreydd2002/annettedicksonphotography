@@ -46,3 +46,17 @@ export function fileToDataUrl(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// Turns a bulk-uploaded filename into a reasonable default photo title,
+// e.g. "garden_ceremony-01.jpg" -> "Garden Ceremony 01". Used by the "Add an
+// Album" flow, which uploads several photos at once without asking for a
+// title per file.
+export function humanizeFilename(filename) {
+  const withoutExt = filename.replace(/\.[^./\\]+$/, "");
+  const spaced = withoutExt.replace(/[-_]+/g, " ").trim();
+  const titleCased = spaced.replace(
+    /\S+/g,
+    (word) => word[0].toUpperCase() + word.slice(1).toLowerCase(),
+  );
+  return titleCased || "Untitled";
+}

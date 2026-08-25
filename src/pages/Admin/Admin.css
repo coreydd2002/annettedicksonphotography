@@ -296,48 +296,6 @@
   margin-bottom: 24px;
 }
 
-.admin-filter-tabs {
-  display: flex;
-  gap: 28px;
-  overflow-x: auto;
-}
-
-.admin-filter-tabs .filter-tab {
-  background: none;
-  border: none;
-  padding: 4px 2px 8px;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-ink-soft);
-  cursor: pointer;
-  position: relative;
-  white-space: nowrap;
-}
-
-.admin-filter-tabs .filter-tab::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: var(--color-lavender-dark);
-  transform: scaleX(0);
-  transition: transform 0.2s ease;
-}
-
-.admin-filter-tabs .filter-tab.active {
-  color: var(--color-ink);
-}
-
-.admin-filter-tabs .filter-tab.active::after,
-.admin-filter-tabs .filter-tab:hover::after {
-  transform: scaleX(1);
-}
-
 .admin-empty {
   color: var(--color-ink-soft);
   font-size: 0.9rem;
@@ -360,7 +318,7 @@
   margin: 0 0 14px;
 }
 
-.admin-photo-list {
+.admin-drawer-photo-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -429,18 +387,421 @@
   white-space: nowrap;
 }
 
-.admin-photo-category {
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-lavender-dark);
-}
-
 .admin-delete-btn {
   flex-shrink: 0;
   padding: 10px 18px;
   font-size: 0.72rem;
+}
+
+.admin-photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-photo-actions .btn {
+  padding: 7px 12px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.admin-photo-rename-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-lavender);
+  border-radius: 2px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  background: var(--color-paper);
+}
+
+/* Album list (right panel) */
+.admin-album-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-album-card {
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-white);
+  overflow: hidden;
+}
+
+.admin-album-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+}
+
+.admin-album-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-soft);
+}
+
+.admin-album-chevron {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.admin-album-chevron.expanded {
+  transform: rotate(45deg);
+}
+
+.admin-album-thumb {
+  width: 56px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.admin-album-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-album-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-album-category {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-lavender-dark);
+}
+
+.admin-album-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.admin-album-edit svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-album-edit:hover,
+.admin-album-edit:focus-visible {
+  color: var(--color-lavender-dark);
+  background: var(--color-lavender-pale);
+}
+
+.admin-album-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 14px 52px;
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-album-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-album-photo-thumb {
+  width: 36px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.admin-album-photo-title {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "Add an Album" pending file list */
+.admin-pending-files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -6px 0 0;
+}
+
+.admin-pending-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-paper);
+}
+
+.admin-pending-file.has-error {
+  border-color: #f0c9c6;
+  background: #fbeceb;
+}
+
+.admin-pending-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-pending-file-error {
+  font-size: 0.72rem;
+  color: #9a3b34;
+  flex-shrink: 0;
+}
+
+.admin-pending-file-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.admin-pending-file-remove:hover {
+  color: var(--color-ink);
+}
+
+/* Album edit drawer */
+.admin-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+}
+
+.admin-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.5);
+}
+
+.admin-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(480px, 100vw);
+  background: var(--color-white);
+  padding: 32px;
+  overflow-y: auto;
+  animation: admin-drawer-slide-in 0.25s ease;
+}
+
+@keyframes admin-drawer-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.admin-drawer-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.admin-drawer-close:hover,
+.admin-drawer-close:focus-visible {
+  color: var(--color-ink);
+}
+
+.admin-drawer-title-input {
+  display: block;
+  width: 100%;
+  margin: 6px 0 24px;
+  padding: 6px 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  font-family: var(--font-heading);
+  font-size: 1.7rem;
+  color: var(--color-ink);
+}
+
+.admin-drawer-title-input:hover {
+  border-bottom-color: var(--color-border);
+}
+
+.admin-drawer-title-input:focus {
+  outline: none;
+  border-bottom-color: var(--theme-accent, var(--color-lavender));
+}
+
+.admin-drawer-add-btn {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.admin-drawer-delete-album {
+  width: 100%;
+  margin-top: 8px;
+  border-color: #d9433a;
+  color: #d9433a;
+}
+
+.admin-drawer-delete-album:hover,
+.admin-drawer-delete-album:focus-visible {
+  background: #d9433a;
+  color: var(--color-white);
+}
+
+/* Add Photo popup (opened from within the album drawer) */
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.6);
+}
+
+.admin-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-white);
+  border-radius: 2px;
+  padding: 32px;
+}
+
+.admin-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.admin-modal-close:hover,
+.admin-modal-close:focus-visible {
+  color: var(--color-ink);
+}
+
+.admin-modal-subtitle {
+  margin: -8px 0 20px;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+/* Delete confirmation popup, shared by photo and album deletes */
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirm-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.6);
+}
+
+.confirm-dialog-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-white);
+  border-radius: 2px;
+  padding: 28px;
+  text-align: center;
+}
+
+.confirm-dialog-panel h3 {
+  margin: 0 0 10px;
+}
+
+.confirm-dialog-panel p {
+  color: var(--color-ink-soft);
+  margin: 0 0 24px;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-dialog-actions .btn {
+  flex: 1;
+}
+
+.confirm-dialog-confirm {
+  background: #d9433a;
+}
+
+.confirm-dialog-confirm:hover,
+.confirm-dialog-confirm:focus-visible {
+  background: #b8362e;
 }
 
 @media (max-width: 900px) {
@@ -481,5 +842,13 @@
 
   .admin-photo-card {
     flex-wrap: wrap;
+  }
+
+  .admin-drawer-panel {
+    padding: 24px 20px;
+  }
+
+  .admin-modal-panel {
+    padding: 24px 20px;
   }
 }

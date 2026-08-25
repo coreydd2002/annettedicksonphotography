@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
-import { IconDragHandle, IconEye, IconEyeOff } from "../../components/icons";
+import { IconEdit, IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
+import ConfirmDialog from "./ConfirmDialog";
+import AlbumDrawer from "./AlbumDrawer";
 import {
   detectImageAspect,
   fileToDataUrl,
+  humanizeFilename,
   MAX_IMAGE_BYTES,
   REDEPLOY_REDIRECT_KEY,
 } from "./utils";
@@ -12,9 +15,6 @@ import { CATEGORIES, getCategory } from "../../../shared/categories";
 import "./Admin.css";
 
 const SESSION_KEY = "adp_admin_token";
-const NEW_ALBUM_VALUE = "__new__";
-
-const FILTERS = [{ key: "all", label: "All" }, ...CATEGORIES];
 
 function readSession() {
   try {
@@ -40,21 +40,17 @@ function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-// Splices a reordered view of one category's items back into their original
-// slots in the full manifest order, leaving other categories' positions
-// untouched. When activeFilter is "all", newVisibleOrder already IS the full
-// order.
-function applyReorder(items, activeFilter, newVisibleOrder) {
-  if (activeFilter === "all") {
-    return newVisibleOrder;
-  }
-  const visibleIndices = [];
+// Splices a reordered view of one album's photos back into their original
+// slots in the full manifest order, leaving other albums' positions
+// untouched.
+function reorderAlbumPhotos(items, albumId, newOrder) {
+  const albumIndices = [];
   items.forEach((item, index) => {
-    if (item.category === activeFilter) visibleIndices.push(index);
+    if (item.albumId === albumId) albumIndices.push(index);
   });
   const next = [...items];
-  visibleIndices.forEach((index, position) => {
-    next[index] = newVisibleOrder[position];
+  albumIndices.forEach((index, position) => {
+    next[index] = newOrder[position];
   });
   return next;
 }
@@ -68,6 +64,8 @@ function submitOnEnter(handler) {
   };
 }
 
+let pendingFileCounter = 0;
+
 export default function Admin() {
   const [session, setSession] = useState(() => readSession());
   const isAuthenticated = Boolean(session);
@@ -80,27 +78,22 @@ export default function Admin() {
   const [items, setItems] = useState([]);
   const [albums, setAlbums] = useState([]);
   const [listStatus, setListStatus] = useState("idle");
-  const [activeFilter, setActiveFilter] = useState("all");
   const savedItemsRef = useRef([]);
   const savedAlbumsRef = useRef([]);
 
-  const [draggedId, setDraggedId] = useState(null);
-  const [dragOverId, setDragOverId] = useState(null);
+  const [expandedAlbumIds, setExpandedAlbumIds] = useState(() => new Set());
+  const [editingAlbumId, setEditingAlbumId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
   const [publishError, setPublishError] = useState("");
 
-  const [title, setTitle] = useState("");
-  const [albumChoice, setAlbumChoice] = useState(NEW_ALBUM_VALUE);
+  // "Add an Album" block
   const [newAlbumTitle, setNewAlbumTitle] = useState("");
   const [newAlbumCategory, setNewAlbumCategory] = useState(CATEGORIES[0].key);
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [detectedAspect, setDetectedAspect] = useState("");
-  const [fileError, setFileError] = useState("");
-  const [uploadStatus, setUploadStatus] = useState("idle");
-  const [uploadError, setUploadError] = useState("");
-  const fileInputRef = useRef(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [addAlbumStatus, setAddAlbumStatus] = useState("idle");
+  const [addAlbumError, setAddAlbumError] = useState("");
 
   const authFetch = useCallback(
     async (path, options = {}) => {
@@ -145,12 +138,6 @@ export default function Admin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoginStatus("submitting");
@@ -186,184 +173,165 @@ export default function Admin() {
     setSession(null);
   };
 
-  const handleFileChange = async (event) => {
-    const selected = event.target.files?.[0];
-    setFileError("");
-    setDetectedAspect("");
-    setUploadStatus("idle");
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl("");
-    setFile(null);
-
-    if (!selected) return;
-
-    if (selected.size > MAX_IMAGE_BYTES) {
-      setFileError(
-        "Please use a photo under 3MB — consider resizing or reducing quality.",
-      );
-      return;
-    }
-
-    try {
-      const aspect = await detectImageAspect(selected);
-      setDetectedAspect(aspect);
-      setFile(selected);
-      setPreviewUrl(URL.createObjectURL(selected));
-    } catch {
-      setFileError("Could not read that image — please try a different file.");
-    }
+  const resetAddAlbumForm = () => {
+    setNewAlbumTitle("");
+    setNewAlbumCategory(CATEGORIES[0].key);
+    setPendingFiles([]);
   };
 
-  const resetUploadForm = () => {
-    setTitle("");
-    setFile(null);
-    setDetectedAspect("");
-    setFileError("");
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const handlePendingFilesChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const entries = await Promise.all(
+      files.map(async (file) => {
+        pendingFileCounter += 1;
+        const id = `${Date.now()}-${pendingFileCounter}`;
+        if (file.size > MAX_IMAGE_BYTES) {
+          return { id, file, name: file.name, error: "Over 3MB" };
+        }
+        try {
+          const aspect = await detectImageAspect(file);
+          return { id, file, name: file.name, aspect };
+        } catch {
+          return { id, file, name: file.name, error: "Could not read image" };
+        }
+      }),
+    );
+
+    setPendingFiles((prev) => [...prev, ...entries]);
   };
 
-  // Commits the image file right away (so it exists, small request, one at a
-  // time) and adds it to the local staged list. The public site doesn't
-  // change until "Save and Redeploy" writes the manifests. Every photo must
-  // belong to an album — either one already staged (albumChoice holds its
-  // id) or a brand new one created inline (NEW_ALBUM_VALUE).
-  const handleUpload = async (event) => {
-    event.preventDefault();
+  const removePendingFile = (id) => {
+    setPendingFiles((prev) => prev.filter((entry) => entry.id !== id));
+  };
 
-    const isNewAlbum = albumChoice === NEW_ALBUM_VALUE;
+  const canAddAlbum =
+    newAlbumTitle.trim() &&
+    pendingFiles.some((entry) => !entry.error) &&
+    addAlbumStatus !== "submitting";
 
-    if (!title.trim() || !file || !detectedAspect) {
-      setUploadStatus("error");
-      setUploadError("Please add a title and choose a photo before saving.");
-      return;
-    }
-    if (isNewAlbum && !newAlbumTitle.trim()) {
-      setUploadStatus("error");
-      setUploadError("Please name the new album before saving.");
-      return;
-    }
+  // Creates the album (via the first upload) and uploads every valid
+  // pending photo to it, one at a time — each upload is its own small
+  // request, same as the single-photo flow. Nothing is live until "Save
+  // and Redeploy"; this just stages the new album and its photos locally.
+  const handleAddAlbum = async () => {
+    if (!canAddAlbum) return;
 
-    setUploadStatus("submitting");
-    setUploadError("");
+    const validEntries = pendingFiles.filter((entry) => !entry.error);
+    setAddAlbumStatus("submitting");
+    setAddAlbumError("");
 
-    try {
-      const imageDataUrl = await fileToDataUrl(file);
-      const selectedAlbum = albums.find((album) => album.id === albumChoice);
-      const body = isNewAlbum
-        ? {
-            title: title.trim(),
-            aspect: detectedAspect,
-            imageDataUrl,
-            newAlbum: {
-              title: newAlbumTitle.trim(),
-              category: newAlbumCategory,
-            },
-          }
-        : {
-            title: title.trim(),
-            aspect: detectedAspect,
-            imageDataUrl,
-            albumId: albumChoice,
-            category: selectedAlbum?.category,
-          };
+    let createdAlbum = null;
+    const succeededIds = new Set();
+    const newItems = [];
+    let uploadError = "";
 
-      const response = await authFetch("/api/admin/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await response.json();
+    for (const entry of validEntries) {
+      try {
+        const imageDataUrl = await fileToDataUrl(entry.file);
+        const body = createdAlbum
+          ? {
+              title: humanizeFilename(entry.name),
+              aspect: entry.aspect,
+              imageDataUrl,
+              albumId: createdAlbum.id,
+              category: createdAlbum.category,
+            }
+          : {
+              title: humanizeFilename(entry.name),
+              aspect: entry.aspect,
+              imageDataUrl,
+              newAlbum: {
+                title: newAlbumTitle.trim(),
+                category: newAlbumCategory,
+              },
+            };
 
-      if (!response.ok) {
-        setUploadStatus("error");
-        setUploadError(data.error || "Something went wrong — please try again.");
-        return;
+        const response = await authFetch("/api/admin/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          uploadError = data.error || "Something went wrong uploading one of the photos.";
+          break;
+        }
+
+        if (data.album) createdAlbum = data.album;
+        newItems.push(data.item);
+        succeededIds.add(entry.id);
+      } catch {
+        uploadError = "Something went wrong uploading one of the photos.";
+        break;
       }
+    }
 
-      setItems((prev) => [...prev, data.item]);
-      if (data.album) {
-        setAlbums((prev) => [...prev, data.album]);
-        setAlbumChoice(data.album.id);
-        setNewAlbumTitle("");
-      }
-      setUploadStatus("success");
-      resetUploadForm();
-    } catch {
-      setUploadStatus("error");
-      setUploadError("Something went wrong — please try again.");
+    if (newItems.length) setItems((prev) => [...prev, ...newItems]);
+    if (createdAlbum) setAlbums((prev) => [...prev, createdAlbum]);
+    setPendingFiles((prev) => prev.filter((entry) => !succeededIds.has(entry.id)));
+
+    if (uploadError) {
+      setAddAlbumStatus("error");
+      setAddAlbumError(uploadError);
+    } else {
+      setAddAlbumStatus("idle");
+      resetAddAlbumForm();
     }
   };
 
-  // Purely local — nothing is deleted on GitHub until "Save and Redeploy".
-  const handleDelete = (item) => {
-    if (
-      !window.confirm(
-        `Remove "${item.title}" from the gallery? This won't take effect until you Save and Redeploy.`,
-      )
-    ) {
-      return;
-    }
-    setItems((prev) => prev.filter((existing) => existing.id !== item.id));
+  const toggleExpanded = (albumId) => {
+    setExpandedAlbumIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(albumId)) next.delete(albumId);
+      else next.add(albumId);
+      return next;
+    });
   };
 
-  const visibleItems =
-    activeFilter === "all"
-      ? items
-      : items.filter((item) => item.category === activeFilter);
+  const requestConfirm = (options) => setConfirmDialog(options);
+  const closeConfirm = () => setConfirmDialog(null);
+
+  const requestDeleteAlbum = (album) => {
+    const photoCount = items.filter((item) => item.albumId === album.id).length;
+    requestConfirm({
+      title: "Delete album?",
+      message: `Delete "${album.title}" and ${photoCount} ${
+        photoCount === 1 ? "photo" : "photos"
+      } in it? This won't take effect until you Save and Redeploy.`,
+      confirmLabel: "Delete Album",
+      onConfirm: () => {
+        setAlbums((prev) => prev.filter((a) => a.id !== album.id));
+        setItems((prev) => prev.filter((item) => item.albumId !== album.id));
+        setEditingAlbumId(null);
+        closeConfirm();
+      },
+    });
+  };
+
+  const requestDeletePhoto = (photo) => {
+    requestConfirm({
+      title: "Delete photo?",
+      message: `Remove "${photo.title}" from the gallery? This won't take effect until you Save and Redeploy.`,
+      confirmLabel: "Delete Photo",
+      onConfirm: () => {
+        setItems((prev) => prev.filter((item) => item.id !== photo.id));
+        closeConfirm();
+      },
+    });
+  };
 
   const hasPendingChanges =
-    items.map((item) => String(item.id)).join("|") !==
-      savedItemsRef.current.map((item) => String(item.id)).join("|") ||
-    albums.map((album) => String(album.id)).join("|") !==
-      savedAlbumsRef.current.map((album) => String(album.id)).join("|");
-
-  const handleDragStart = (event, id) => {
-    setDraggedId(id);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(id));
-  };
-
-  const handleDragOver = (event, id) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    if (id !== draggedId && dragOverId !== id) {
-      setDragOverId(id);
-    }
-  };
-
-  const handleDragLeave = (id) => {
-    setDragOverId((current) => (current === id ? null : current));
-  };
-
-  const handleDrop = (event, targetId) => {
-    event.preventDefault();
-    setDragOverId(null);
-
-    const sourceId = draggedId;
-    setDraggedId(null);
-    if (sourceId == null || sourceId === targetId) return;
-
-    const fromIndex = visibleItems.findIndex((item) => item.id === sourceId);
-    const toIndex = visibleItems.findIndex((item) => item.id === targetId);
-    if (fromIndex === -1 || toIndex === -1) return;
-
-    const reorderedVisible = [...visibleItems];
-    const [moved] = reorderedVisible.splice(fromIndex, 1);
-    reorderedVisible.splice(toIndex, 0, moved);
-
-    setItems((prevItems) => applyReorder(prevItems, activeFilter, reorderedVisible));
-  };
-
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
-  };
+    JSON.stringify(items) !== JSON.stringify(savedItemsRef.current) ||
+    JSON.stringify(albums) !== JSON.stringify(savedAlbumsRef.current);
 
   const handleDiscardAll = () => {
     setItems(savedItemsRef.current);
     setAlbums(savedAlbumsRef.current);
+    setEditingAlbumId(null);
     setPublishStatus("idle");
     setPublishError("");
   };
@@ -467,6 +435,8 @@ export default function Admin() {
     );
   }
 
+  const editingAlbum = albums.find((album) => album.id === editingAlbumId) || null;
+
   return (
     <section className="section admin-section admin-dashboard-section">
       <div className="container admin-dashboard-container">
@@ -483,119 +453,85 @@ export default function Admin() {
         <div className="admin-grid">
           <div className="admin-sidebar">
             <div className="admin-panel admin-upload-panel">
-              <h2>Add a Photo</h2>
+              <h2>Add an Album</h2>
 
-              {uploadStatus === "success" && (
-                <p className="form-banner form-banner-success" role="status">
-                  Added — it's in the list below. Click "Save and Redeploy"
-                  when you're done making changes.
-                </p>
-              )}
-              {uploadStatus === "error" && (
+              {addAlbumStatus === "error" && (
                 <p className="form-banner form-banner-error" role="alert">
-                  {uploadError}
+                  {addAlbumError}
                 </p>
               )}
 
-              <form className="admin-upload-form" onSubmit={handleUpload}>
+              <div className="admin-upload-form">
                 <div className="form-row">
-                  <label htmlFor="admin-title">Title</label>
+                  <label htmlFor="admin-new-album-title">Album Name</label>
                   <input
-                    id="admin-title"
+                    id="admin-new-album-title"
                     type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    onKeyDown={submitOnEnter(handleUpload)}
+                    value={newAlbumTitle}
+                    onChange={(event) => setNewAlbumTitle(event.target.value)}
                     required
                   />
                 </div>
 
                 <div className="form-row">
-                  <label htmlFor="admin-album">Album</label>
+                  <label htmlFor="admin-new-album-category">Photoshoot Type</label>
                   <select
-                    id="admin-album"
-                    value={albumChoice}
-                    onChange={(event) => setAlbumChoice(event.target.value)}
+                    id="admin-new-album-category"
+                    value={newAlbumCategory}
+                    onChange={(event) => setNewAlbumCategory(event.target.value)}
                   >
-                    <option value={NEW_ALBUM_VALUE}>+ Create New Album</option>
-                    {albums.map((album) => (
-                      <option key={album.id} value={album.id}>
-                        {album.title} ({getCategory(album.category)?.label || album.category})
+                    {CATEGORIES.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {albumChoice === NEW_ALBUM_VALUE && (
-                  <>
-                    <div className="form-row">
-                      <label htmlFor="admin-new-album-title">New Album Title</label>
-                      <input
-                        id="admin-new-album-title"
-                        type="text"
-                        value={newAlbumTitle}
-                        onChange={(event) => setNewAlbumTitle(event.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-row">
-                      <label htmlFor="admin-new-album-category">Album Category</label>
-                      <select
-                        id="admin-new-album-category"
-                        value={newAlbumCategory}
-                        onChange={(event) => setNewAlbumCategory(event.target.value)}
-                      >
-                        {CATEGORIES.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-
                 <div className="form-row">
-                  <label htmlFor="admin-file">Photo</label>
+                  <label htmlFor="admin-new-album-files">Photos</label>
                   <input
-                    id="admin-file"
+                    id="admin-new-album-files"
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    required
+                    multiple
+                    onChange={handlePendingFilesChange}
                   />
                 </div>
 
-                {fileError && <p className="admin-file-error">{fileError}</p>}
-
-                {previewUrl && (
-                  <div className="admin-preview">
-                    <img
-                      src={previewUrl}
-                      alt="Selected preview"
-                      className="admin-preview-image"
-                    />
-                    <span className="admin-preview-aspect">
-                      Detected aspect ratio: {detectedAspect}
-                    </span>
-                  </div>
+                {pendingFiles.length > 0 && (
+                  <ul className="admin-pending-files">
+                    {pendingFiles.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className={`admin-pending-file ${entry.error ? "has-error" : ""}`}
+                      >
+                        <span className="admin-pending-file-name">{entry.name}</span>
+                        {entry.error && (
+                          <span className="admin-pending-file-error">{entry.error}</span>
+                        )}
+                        <button
+                          type="button"
+                          className="admin-pending-file-remove"
+                          onClick={() => removePendingFile(entry.id)}
+                          aria-label={`Remove ${entry.name}`}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
 
                 <button
-                  type="submit"
+                  type="button"
                   className="btn btn-primary"
-                  disabled={
-                    uploadStatus === "submitting" ||
-                    !file ||
-                    Boolean(fileError) ||
-                    (albumChoice === NEW_ALBUM_VALUE && !newAlbumTitle.trim())
-                  }
+                  onClick={handleAddAlbum}
+                  disabled={!canAddAlbum}
                 >
-                  {uploadStatus === "submitting" ? "Adding…" : "Add Photo"}
+                  {addAlbumStatus === "submitting" ? "Adding…" : "Add Album"}
                 </button>
-              </form>
+              </div>
             </div>
 
             <div className="admin-publish-panel">
@@ -629,27 +565,7 @@ export default function Admin() {
 
           <div className="admin-panel admin-list-panel">
             <div className="admin-list-header">
-              <h2>Current Photos</h2>
-              <div
-                className="filter-tabs admin-filter-tabs"
-                role="tablist"
-                aria-label="Filter by category"
-              >
-                {FILTERS.map((filter) => (
-                  <button
-                    key={filter.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeFilter === filter.key}
-                    className={`filter-tab ${
-                      activeFilter === filter.key ? "active" : ""
-                    }`}
-                    onClick={() => setActiveFilter(filter.key)}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
-              </div>
+              <h2>Albums</h2>
             </div>
 
             {listStatus === "error" && (
@@ -662,62 +578,112 @@ export default function Admin() {
               </p>
             )}
 
-            {listStatus === "loading" && items.length === 0 ? (
+            {listStatus === "loading" && albums.length === 0 ? (
               <p className="admin-empty">Loading…</p>
-            ) : visibleItems.length === 0 ? (
-              <p className="admin-empty">No photos in this category yet.</p>
+            ) : albums.length === 0 ? (
+              <p className="admin-empty">No albums yet — add one to get started.</p>
             ) : (
-              <>
-                <p className="admin-list-hint">
-                  Drag a photo to reorder it, then Save and Redeploy.
-                </p>
-                <ul className="admin-photo-list">
-                  {visibleItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className={`admin-photo-card ${
-                        draggedId === item.id ? "dragging" : ""
-                      } ${dragOverId === item.id ? "drag-over" : ""}`}
-                      draggable
-                      onDragStart={(event) => handleDragStart(event, item.id)}
-                      onDragOver={(event) => handleDragOver(event, item.id)}
-                      onDragLeave={() => handleDragLeave(item.id)}
-                      onDrop={(event) => handleDrop(event, item.id)}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <span className="admin-drag-handle" aria-label="Drag to reorder">
-                        <IconDragHandle />
-                      </span>
-                      <PlaceholderImage
-                        src={item.src}
-                        alt={item.title}
-                        variant={item.variant}
-                        aspect={item.aspect}
-                        draggable={false}
-                        className="admin-photo-thumb"
-                      />
-                      <div className="admin-photo-meta">
-                        <span className="admin-photo-title">{item.title}</span>
-                        <span className="admin-photo-category">
-                          {albums.find((album) => album.id === item.albumId)
-                            ?.title || item.category}
-                        </span>
+              <ul className="admin-album-list">
+                {albums.map((album) => {
+                  const photos = items.filter((item) => item.albumId === album.id);
+                  const expanded = expandedAlbumIds.has(album.id);
+                  const category = getCategory(album.category);
+                  return (
+                    <li key={album.id} className="admin-album-card">
+                      <div className="admin-album-row">
+                        <button
+                          type="button"
+                          className="admin-album-toggle"
+                          onClick={() => toggleExpanded(album.id)}
+                          aria-expanded={expanded}
+                          aria-label={expanded ? "Collapse album" : "Expand album"}
+                        >
+                          <span
+                            className={`admin-album-chevron ${expanded ? "expanded" : ""}`}
+                            aria-hidden="true"
+                          />
+                        </button>
+                        <PlaceholderImage
+                          src={photos[0]?.src}
+                          alt={album.title}
+                          variant={category?.variant}
+                          aspect="1 / 1"
+                          showIcon={false}
+                          className="admin-album-thumb"
+                        />
+                        <div className="admin-album-meta">
+                          <span className="admin-album-title">{album.title}</span>
+                          <span className="admin-album-category">
+                            {category?.label || album.category} · {photos.length}{" "}
+                            {photos.length === 1 ? "photo" : "photos"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="admin-album-edit"
+                          onClick={() => setEditingAlbumId(album.id)}
+                          aria-label={`Edit ${album.title}`}
+                        >
+                          <IconEdit />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-outline admin-delete-btn"
-                        onClick={() => handleDelete(item)}
-                      >
-                        Delete
-                      </button>
+
+                      {expanded && (
+                        <ul className="admin-album-photos">
+                          {photos.length === 0 ? (
+                            <li className="admin-empty">No photos yet.</li>
+                          ) : (
+                            photos.map((photo) => (
+                              <li key={photo.id} className="admin-album-photo-row">
+                                <PlaceholderImage
+                                  src={photo.src}
+                                  alt={photo.title}
+                                  variant={photo.variant}
+                                  aspect="1 / 1"
+                                  showIcon={false}
+                                  className="admin-album-photo-thumb"
+                                />
+                                <span className="admin-album-photo-title">{photo.title}</span>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      )}
                     </li>
-                  ))}
-                </ul>
-              </>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </div>
       </div>
+
+      {editingAlbum && (
+        <AlbumDrawer
+          album={editingAlbum}
+          photos={items.filter((item) => item.albumId === editingAlbum.id)}
+          authFetch={authFetch}
+          onClose={() => setEditingAlbumId(null)}
+          onRenameAlbum={(newTitle) =>
+            setAlbums((prev) =>
+              prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
+            )
+          }
+          onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
+          onRenamePhoto={(photoId, newTitle) =>
+            setItems((prev) =>
+              prev.map((item) => (item.id === photoId ? { ...item, title: newTitle } : item)),
+            )
+          }
+          onDeletePhotoRequest={requestDeletePhoto}
+          onReorderPhotos={(newOrder) =>
+            setItems((prev) => reorderAlbumPhotos(prev, editingAlbum.id, newOrder))
+          }
+          onPhotoAdded={(item) => setItems((prev) => [...prev, item])}
+        />
+      )}
+
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} />}
     </section>
   );
 }

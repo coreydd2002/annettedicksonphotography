@@ -7,3 +7,4 @@ export { default as IconInstagram } from "./IconInstagram";
 export { default as IconEye } from "./IconEye";
 export { default as IconEyeOff } from "./IconEyeOff";
 export { default as IconDragHandle } from "./IconDragHandle";
+export { default as IconEdit } from "./IconEdit";
