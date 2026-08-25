@@ -6,6 +6,7 @@ export default function PlaceholderImage({
   src,
   alt = "",
   aspect = "4 / 5",
+  objectPosition,
   variant = 0,
   label,
   showIcon = true,
@@ -29,7 +30,7 @@ export default function PlaceholderImage({
         loading="lazy"
         draggable={draggable}
         className={`placeholder-image ${className}`}
-        style={{ aspectRatio: aspect }}
+        style={{ aspectRatio: aspect, objectPosition }}
         onError={() => setFailed(true)}
       />
     );

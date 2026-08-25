@@ -110,6 +110,8 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onSaveNew
           title: entry.name,
           aspect: entry.aspect,
           src,
+          focusX: 0.5,
+          focusY: 0.5,
         });
         succeededIds.add(entry.id);
       } catch (err) {

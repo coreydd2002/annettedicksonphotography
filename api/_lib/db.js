@@ -22,7 +22,8 @@ export async function getAllForAdmin() {
   const [albums, photos] = await Promise.all([
     sql`SELECT id, title, category FROM albums ORDER BY created_at ASC`,
     sql`
-      SELECT id, album_id AS "albumId", category, title, aspect, src
+      SELECT id, album_id AS "albumId", category, title, aspect, src,
+             focus_x AS "focusX", focus_y AS "focusY"
       FROM photos
       ORDER BY album_id, "position" ASC
     `,
@@ -49,9 +50,10 @@ export async function getAlbumsWithCovers() {
       ORDER BY a.created_at ASC
     `,
     sql`
-      SELECT id, album_id AS "albumId", src, aspect
+      SELECT id, album_id AS "albumId", src, aspect,
+             focus_x AS "focusX", focus_y AS "focusY"
       FROM (
-        SELECT id, album_id, src, aspect,
+        SELECT id, album_id, src, aspect, focus_x, focus_y,
                ROW_NUMBER() OVER (PARTITION BY album_id ORDER BY "position" ASC) AS rn
         FROM photos
       ) ranked
@@ -73,8 +75,16 @@ export async function getAlbumsWithCovers() {
       id: row.id,
       title: row.title,
       category: row.category,
-      coverPhoto: cover ? { id: cover.id, src: cover.src, aspect: cover.aspect } : null,
-      stackPhotos: stack.map((p) => ({ id: p.id, src: p.src, aspect: p.aspect })),
+      coverPhoto: cover
+        ? { id: cover.id, src: cover.src, aspect: cover.aspect, focusX: cover.focusX, focusY: cover.focusY }
+        : null,
+      stackPhotos: stack.map((p) => ({
+        id: p.id,
+        src: p.src,
+        aspect: p.aspect,
+        focusX: p.focusX,
+        focusY: p.focusY,
+      })),
       // CockroachDB's INT/INTEGER is a 64-bit alias for INT8, so even with
       // the ::int cast above this column still arrives over the wire typed
       // as int8 — postgres.js stringifies int8 values by default to avoid
@@ -155,15 +165,17 @@ export async function publishChanges({ albums, photos }) {
     }
     for (const p of positionedPhotos) {
       await tx`
-        INSERT INTO photos (id, album_id, category, title, aspect, src, "position")
-        VALUES (${p.id}, ${p.albumId}, ${p.category}, ${p.title}, ${p.aspect}, ${p.src}, ${p.position})
+        INSERT INTO photos (id, album_id, category, title, aspect, src, "position", focus_x, focus_y)
+        VALUES (${p.id}, ${p.albumId}, ${p.category}, ${p.title}, ${p.aspect}, ${p.src}, ${p.position}, ${p.focusX}, ${p.focusY})
         ON CONFLICT (id) DO UPDATE
           SET album_id = EXCLUDED.album_id,
               category = EXCLUDED.category,
               title = EXCLUDED.title,
               aspect = EXCLUDED.aspect,
               src = EXCLUDED.src,
-              "position" = EXCLUDED."position"
+              "position" = EXCLUDED."position",
+              focus_x = EXCLUDED.focus_x,
+              focus_y = EXCLUDED.focus_y
       `;
     }
   });

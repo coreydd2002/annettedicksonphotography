@@ -5,6 +5,10 @@ import { CATEGORY_KEYS } from "../../shared/categories.js";
 
 const ASPECT_PATTERN = /^\d+ \/ \d+$/;
 
+function isValidFocus(value) {
+  return value === undefined || (typeof value === "number" && value >= 0 && value <= 1);
+}
+
 function isValidItem(item) {
   if (!item || typeof item !== "object") return false;
   if (item.id === undefined || item.id === null || item.id === "") return false;
@@ -13,6 +17,7 @@ function isValidItem(item) {
   if (typeof item.title !== "string" || !item.title.trim()) return false;
   if (typeof item.aspect !== "string" || !ASPECT_PATTERN.test(item.aspect)) return false;
   if (typeof item.src !== "string" || !item.src) return false;
+  if (!isValidFocus(item.focusX) || !isValidFocus(item.focusY)) return false;
   return true;
 }
 
@@ -104,6 +109,8 @@ export default async function handler(req, res) {
     title: item.title.trim(),
     aspect: item.aspect,
     src: item.src,
+    focusX: item.focusX ?? 0.5,
+    focusY: item.focusY ?? 0.5,
   }));
 
   let removedPhotos;

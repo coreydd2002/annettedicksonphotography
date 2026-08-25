@@ -6,6 +6,7 @@ import { getCategory } from "../../../shared/categories";
 import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
 import { uploadPhotoBlob } from "./blobUpload";
 import ConfirmDialog from "./ConfirmDialog";
+import CoverCropEditor from "./CoverCropEditor";
 
 const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 
@@ -38,6 +39,7 @@ export default function AlbumDrawer({
   const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [cropEditorOpen, setCropEditorOpen] = useState(false);
 
   const isDirty =
     draftTitle.trim() !== album.title ||
@@ -90,13 +92,29 @@ export default function AlbumDrawer({
       });
       setDraftPhotos((prev) => [
         ...prev,
-        { id, albumId: album.id, category: album.category, title: file.name, aspect, src },
+        {
+          id,
+          albumId: album.id,
+          category: album.category,
+          title: file.name,
+          aspect,
+          src,
+          focusX: 0.5,
+          focusY: 0.5,
+        },
       ]);
       setAddPhotoStatus("idle");
     } catch (err) {
       setAddPhotoStatus("error");
       setAddPhotoError(err.message || "Something went wrong — please try again.");
     }
+  };
+
+  const handleCropApply = ({ focusX, focusY }) => {
+    setDraftPhotos((prev) =>
+      prev.map((photo, index) => (index === 0 ? { ...photo, focusX, focusY } : photo)),
+    );
+    setCropEditorOpen(false);
   };
 
   const handleCancelRequest = () => {
@@ -131,7 +149,8 @@ export default function AlbumDrawer({
       saveStatus === "saving" ||
       deleteConfirmPhoto ||
       showCancelConfirm ||
-      lightboxIndex !== null
+      lightboxIndex !== null ||
+      cropEditorOpen
     ) {
       return undefined;
     }
@@ -141,7 +160,15 @@ export default function AlbumDrawer({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPhotoStatus, saveStatus, deleteConfirmPhoto, showCancelConfirm, lightboxIndex, isDirty]);
+  }, [
+    addPhotoStatus,
+    saveStatus,
+    deleteConfirmPhoto,
+    showCancelConfirm,
+    lightboxIndex,
+    cropEditorOpen,
+    isDirty,
+  ]);
 
   const category = getCategory(album.category);
 
@@ -190,8 +217,14 @@ export default function AlbumDrawer({
                   <button
                     type="button"
                     className={`admin-thumb-btn ${index === 0 ? "is-cover" : ""}`}
-                    onClick={() => setLightboxIndex(index)}
-                    aria-label={`View ${photo.title}`}
+                    onClick={() =>
+                      index === 0 ? setCropEditorOpen(true) : setLightboxIndex(index)
+                    }
+                    aria-label={
+                      index === 0
+                        ? `Position the cover crop for ${photo.title}`
+                        : `View ${photo.title}`
+                    }
                   >
                     <PlaceholderImage
                       src={photo.src}
@@ -312,6 +345,14 @@ export default function AlbumDrawer({
             setLightboxIndex((i) => (i - 1 + draftPhotos.length) % draftPhotos.length)
           }
           onNext={() => setLightboxIndex((i) => (i + 1) % draftPhotos.length)}
+        />
+      )}
+
+      {cropEditorOpen && draftPhotos[0] && (
+        <CoverCropEditor
+          photo={draftPhotos[0]}
+          onApply={handleCropApply}
+          onCancel={() => setCropEditorOpen(false)}
         />
       )}
     </div>

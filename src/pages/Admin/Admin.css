@@ -791,6 +791,107 @@
   color: var(--color-white);
 }
 
+/* Cover crop picker — opened from the cover photo's thumbnail. Shows the
+   photo at true size with a draggable square marking what the public
+   gallery's square crop will keep; everything outside it is dimmed via a
+   box-shadow spread clipped to the image by the wrap's overflow:hidden,
+   rather than a separate mask element. */
+.crop-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.crop-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.75);
+}
+
+.crop-picker-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-white);
+  border-radius: 2px;
+  padding: 32px;
+  text-align: center;
+}
+
+.crop-picker-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.crop-picker-close:hover,
+.crop-picker-close:focus-visible {
+  color: var(--color-ink);
+}
+
+.crop-picker-hint {
+  margin: -8px 0 20px;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.crop-picker-image-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.crop-picker-image {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.crop-picker-frame {
+  position: absolute;
+  border: 2px solid var(--color-white);
+  outline: 1px solid rgba(26, 26, 26, 0.4);
+  box-shadow: 0 0 0 9999px rgba(26, 26, 26, 0.55);
+  cursor: grab;
+  touch-action: none;
+}
+
+.crop-picker-frame:active {
+  cursor: grabbing;
+}
+
+.crop-picker-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.crop-picker-actions .btn {
+  flex: 1;
+  max-width: 200px;
+}
+
+@media (max-width: 480px) {
+  .crop-picker-panel {
+    padding: 24px 20px;
+  }
+}
+
 /* Delete confirmation popup, shared by photo and album deletes */
 .confirm-dialog {
   position: fixed;

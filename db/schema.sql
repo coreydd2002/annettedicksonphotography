@@ -26,6 +26,13 @@ CREATE TABLE photos (
   aspect     TEXT NOT NULL,                    -- e.g. "4 / 5"
   src        TEXT NOT NULL,                    -- Vercel Blob public URL
   "position" INTEGER NOT NULL DEFAULT 0,        -- 0-based order within its album (0 = cover photo)
+  -- Focal point (0..1 fraction of the photo's width/height) used as the
+  -- CSS object-position when this photo is square-cropped as an album
+  -- cover on the public Galleries page — set via the admin's crop picker.
+  -- Stored per-photo (not per-album) so each photo remembers its own best
+  -- crop point even if it isn't the current cover.
+  focus_x    DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+  focus_y    DOUBLE PRECISION NOT NULL DEFAULT 0.5,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
