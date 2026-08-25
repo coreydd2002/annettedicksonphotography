@@ -4,14 +4,9 @@ import { IconEdit, IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import ConfirmDialog from "./ConfirmDialog";
 import AlbumDrawer from "./AlbumDrawer";
-import {
-  detectImageAspect,
-  fileToDataUrl,
-  humanizeFilename,
-  MAX_IMAGE_BYTES,
-  REDEPLOY_REDIRECT_KEY,
-} from "./utils";
-import { CATEGORIES, getCategory } from "../../../shared/categories";
+import AddAlbumPanel from "./AddAlbumPanel";
+import { REDEPLOY_REDIRECT_KEY } from "./utils";
+import { getCategory } from "../../../shared/categories";
 import "./Admin.css";
 
 const SESSION_KEY = "adp_admin_token";
@@ -41,13 +36,20 @@ function clearSession() {
 }
 
 // Replaces one album's slice of the flat items array with its (possibly
-// reordered/renamed/added-to/deleted-from) draft version from the drawer.
+// reordered/renamed/added-to/deleted-from) draft version from the workshop.
 // Cross-album absolute position doesn't matter — every consumer filters by
 // albumId, which preserves each album's own relative order regardless of
 // where its items sit in the full array — so it's safe to just drop this
 // album's old entries and append the new ones.
 function applyAlbumPhotos(items, albumId, newAlbumPhotos) {
   return [...items.filter((item) => item.albumId !== albumId), ...newAlbumPhotos];
+}
+
+function isSameWorkshop(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.type !== b.type) return false;
+  return a.type === "edit" ? a.albumId === b.albumId : true;
 }
 
 function submitOnEnter(handler) {
@@ -58,8 +60,6 @@ function submitOnEnter(handler) {
     }
   };
 }
-
-let pendingFileCounter = 0;
 
 export default function Admin() {
   const [session, setSession] = useState(() => readSession());
@@ -77,19 +77,15 @@ export default function Admin() {
   const savedAlbumsRef = useRef([]);
 
   const [expandedAlbumIds, setExpandedAlbumIds] = useState(() => new Set());
-  const [editingAlbumId, setEditingAlbumId] = useState(null);
-  const [drawerIsDirty, setDrawerIsDirty] = useState(false);
+
+  // The right-hand "workshop" panel is either empty, adding a new album, or
+  // editing an existing one — never more than one at a time.
+  const [workshop, setWorkshop] = useState(null); // null | { type: "add" } | { type: "edit", albumId }
+  const [workshopIsDirty, setWorkshopIsDirty] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
   const [publishError, setPublishError] = useState("");
-
-  // "Add an Album" block
-  const [newAlbumTitle, setNewAlbumTitle] = useState("");
-  const [newAlbumCategory, setNewAlbumCategory] = useState(CATEGORIES[0].key);
-  const [pendingFiles, setPendingFiles] = useState([]);
-  const [addAlbumStatus, setAddAlbumStatus] = useState("idle");
-  const [addAlbumError, setAddAlbumError] = useState("");
 
   const authFetch = useCallback(
     async (path, options = {}) => {
@@ -169,116 +165,6 @@ export default function Admin() {
     setSession(null);
   };
 
-  const resetAddAlbumForm = () => {
-    setNewAlbumTitle("");
-    setNewAlbumCategory(CATEGORIES[0].key);
-    setPendingFiles([]);
-  };
-
-  const handlePendingFilesChange = async (event) => {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-    if (files.length === 0) return;
-
-    const entries = await Promise.all(
-      files.map(async (file) => {
-        pendingFileCounter += 1;
-        const id = `${Date.now()}-${pendingFileCounter}`;
-        if (file.size > MAX_IMAGE_BYTES) {
-          return { id, file, name: file.name, error: "Over 3MB" };
-        }
-        try {
-          const aspect = await detectImageAspect(file);
-          return { id, file, name: file.name, aspect };
-        } catch {
-          return { id, file, name: file.name, error: "Could not read image" };
-        }
-      }),
-    );
-
-    setPendingFiles((prev) => [...prev, ...entries]);
-  };
-
-  const removePendingFile = (id) => {
-    setPendingFiles((prev) => prev.filter((entry) => entry.id !== id));
-  };
-
-  const canAddAlbum =
-    newAlbumTitle.trim() &&
-    pendingFiles.some((entry) => !entry.error) &&
-    addAlbumStatus !== "submitting";
-
-  // Creates the album (via the first upload) and uploads every valid
-  // pending photo to it, one at a time — each upload is its own small
-  // request, same as the single-photo flow. Nothing is live until "Save
-  // and Redeploy"; this just stages the new album and its photos locally.
-  const handleAddAlbum = async () => {
-    if (!canAddAlbum) return;
-
-    const validEntries = pendingFiles.filter((entry) => !entry.error);
-    setAddAlbumStatus("submitting");
-    setAddAlbumError("");
-
-    let createdAlbum = null;
-    const succeededIds = new Set();
-    const newItems = [];
-    let uploadError = "";
-
-    for (const entry of validEntries) {
-      try {
-        const imageDataUrl = await fileToDataUrl(entry.file);
-        const body = createdAlbum
-          ? {
-              title: humanizeFilename(entry.name),
-              aspect: entry.aspect,
-              imageDataUrl,
-              albumId: createdAlbum.id,
-              category: createdAlbum.category,
-            }
-          : {
-              title: humanizeFilename(entry.name),
-              aspect: entry.aspect,
-              imageDataUrl,
-              newAlbum: {
-                title: newAlbumTitle.trim(),
-                category: newAlbumCategory,
-              },
-            };
-
-        const response = await authFetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          uploadError = data.error || "Something went wrong uploading one of the photos.";
-          break;
-        }
-
-        if (data.album) createdAlbum = data.album;
-        newItems.push(data.item);
-        succeededIds.add(entry.id);
-      } catch {
-        uploadError = "Something went wrong uploading one of the photos.";
-        break;
-      }
-    }
-
-    if (newItems.length) setItems((prev) => [...prev, ...newItems]);
-    if (createdAlbum) setAlbums((prev) => [...prev, createdAlbum]);
-    setPendingFiles((prev) => prev.filter((entry) => !succeededIds.has(entry.id)));
-
-    if (uploadError) {
-      setAddAlbumStatus("error");
-      setAddAlbumError(uploadError);
-    } else {
-      setAddAlbumStatus("idle");
-      resetAddAlbumForm();
-    }
-  };
-
   const toggleExpanded = (albumId) => {
     setExpandedAlbumIds((prev) => {
       const next = new Set(prev);
@@ -291,33 +177,40 @@ export default function Admin() {
   const requestConfirm = (options) => setConfirmDialog(options);
   const closeConfirm = () => setConfirmDialog(null);
 
-  const closeDrawer = () => {
-    setEditingAlbumId(null);
-    setDrawerIsDirty(false);
+  const closeWorkshop = () => {
+    setWorkshop(null);
+    setWorkshopIsDirty(false);
   };
 
-  // Switching which album is open in the drawer discards that drawer's
-  // unsaved draft (it's about to be replaced) — so if it's dirty, confirm
-  // first. Re-clicking the album that's already open, or opening one while
-  // nothing was open, needs no confirmation.
-  const requestEditAlbum = (albumId) => {
-    if (editingAlbumId && editingAlbumId !== albumId && drawerIsDirty) {
-      const currentTitle =
-        albums.find((a) => a.id === editingAlbumId)?.title || "this album";
+  // Changing what the workshop panel shows (a different album, "add new",
+  // or closing it) discards whatever draft is currently in there — so if
+  // it's dirty, confirm first. Re-requesting the same thing that's already
+  // open needs no confirmation.
+  const requestSetWorkshop = (newWorkshop) => {
+    if (!isSameWorkshop(workshop, newWorkshop) && workshopIsDirty) {
+      const label =
+        workshop?.type === "edit"
+          ? `"${albums.find((a) => a.id === workshop.albumId)?.title || "this album"}"`
+          : "the new album you were adding";
       requestConfirm({
         title: "Discard unsaved changes?",
-        message: `You have unsaved changes to "${currentTitle}". Switching albums will discard them.`,
-        confirmLabel: "Discard & Switch",
+        message: `You have unsaved changes to ${label}. Continuing will discard them.`,
+        confirmLabel: "Discard & Continue",
         onConfirm: () => {
-          setEditingAlbumId(albumId);
-          setDrawerIsDirty(false);
+          setWorkshop(newWorkshop);
+          setWorkshopIsDirty(false);
           closeConfirm();
         },
       });
     } else {
-      setEditingAlbumId(albumId);
-      setDrawerIsDirty(false);
+      setWorkshop(newWorkshop);
+      setWorkshopIsDirty(false);
     }
+  };
+
+  const handleAlbumCreated = ({ album, items: newItems }) => {
+    if (album) setAlbums((prev) => [...prev, album]);
+    if (newItems?.length) setItems((prev) => [...prev, ...newItems]);
   };
 
   const requestDeleteAlbum = (album) => {
@@ -331,7 +224,7 @@ export default function Admin() {
       onConfirm: () => {
         setAlbums((prev) => prev.filter((a) => a.id !== album.id));
         setItems((prev) => prev.filter((item) => item.albumId !== album.id));
-        closeDrawer();
+        closeWorkshop();
         closeConfirm();
       },
     });
@@ -344,7 +237,7 @@ export default function Admin() {
   const handleDiscardAll = () => {
     setItems(savedItemsRef.current);
     setAlbums(savedAlbumsRef.current);
-    closeDrawer();
+    closeWorkshop();
     setPublishStatus("idle");
     setPublishError("");
   };
@@ -461,7 +354,10 @@ export default function Admin() {
     );
   }
 
-  const editingAlbum = albums.find((album) => album.id === editingAlbumId) || null;
+  const editingAlbum =
+    workshop?.type === "edit"
+      ? albums.find((album) => album.id === workshop.albumId) || null
+      : null;
 
   return (
     <section className="section admin-section admin-dashboard-section">
@@ -471,124 +367,48 @@ export default function Admin() {
             <span className="eyebrow">Admin</span>
             <h1>Gallery Manager</h1>
           </div>
-          <button type="button" className="btn btn-outline" onClick={handleLogout}>
-            Sign Out
-          </button>
-        </div>
 
-        <div className={`admin-grid ${editingAlbum ? "admin-grid-with-drawer" : ""}`}>
-          <div className="admin-sidebar">
-            <div className="admin-panel admin-upload-panel">
-              <h2>Add an Album</h2>
-
-              {addAlbumStatus === "error" && (
-                <p className="form-banner form-banner-error" role="alert">
-                  {addAlbumError}
-                </p>
-              )}
-
-              <div className="admin-upload-form">
-                <div className="form-row">
-                  <label htmlFor="admin-new-album-title">Album Name</label>
-                  <input
-                    id="admin-new-album-title"
-                    type="text"
-                    value={newAlbumTitle}
-                    onChange={(event) => setNewAlbumTitle(event.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-row">
-                  <label htmlFor="admin-new-album-category">Photoshoot Type</label>
-                  <select
-                    id="admin-new-album-category"
-                    value={newAlbumCategory}
-                    onChange={(event) => setNewAlbumCategory(event.target.value)}
-                  >
-                    {CATEGORIES.map((option) => (
-                      <option key={option.key} value={option.key}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-row">
-                  <label htmlFor="admin-new-album-files">Photos</label>
-                  <input
-                    id="admin-new-album-files"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    onChange={handlePendingFilesChange}
-                  />
-                </div>
-
-                {pendingFiles.length > 0 && (
-                  <ul className="admin-pending-files">
-                    {pendingFiles.map((entry) => (
-                      <li
-                        key={entry.id}
-                        className={`admin-pending-file ${entry.error ? "has-error" : ""}`}
-                      >
-                        <span className="admin-pending-file-name">{entry.name}</span>
-                        {entry.error && (
-                          <span className="admin-pending-file-error">{entry.error}</span>
-                        )}
-                        <button
-                          type="button"
-                          className="admin-pending-file-remove"
-                          onClick={() => removePendingFile(entry.id)}
-                          aria-label={`Remove ${entry.name}`}
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleAddAlbum}
-                  disabled={!canAddAlbum}
-                >
-                  {addAlbumStatus === "submitting" ? "Adding…" : "Add Album"}
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-publish-panel">
-              {publishStatus === "error" && (
-                <p className="form-banner form-banner-error" role="alert">
-                  {publishError}
-                </p>
-              )}
-              {hasPendingChanges && (
-                <button
-                  type="button"
-                  className="admin-discard-link"
-                  onClick={requestDiscardAll}
-                  disabled={publishStatus === "saving"}
-                >
-                  Discard changes
-                </button>
-              )}
+          <div className="admin-header-actions">
+            {hasPendingChanges && (
               <button
                 type="button"
-                className={`btn btn-primary admin-publish-btn ${
-                  hasPendingChanges ? "" : "is-faded"
-                }`}
-                onClick={handlePublish}
-                disabled={!hasPendingChanges || publishStatus === "saving"}
+                className="admin-discard-link"
+                onClick={requestDiscardAll}
+                disabled={publishStatus === "saving"}
               >
-                {publishStatus === "saving" ? "Saving & Redeploying…" : "Save and Redeploy"}
+                Discard changes
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              className={`btn btn-primary admin-publish-btn ${
+                hasPendingChanges ? "" : "is-faded"
+              }`}
+              onClick={handlePublish}
+              disabled={!hasPendingChanges || publishStatus === "saving"}
+            >
+              {publishStatus === "saving" ? "Saving & Redeploying…" : "Save and Redeploy"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => requestSetWorkshop({ type: "add" })}
+            >
+              Add New Album
+            </button>
+            <button type="button" className="btn btn-outline" onClick={handleLogout}>
+              Sign Out
+            </button>
           </div>
+        </div>
 
+        {publishStatus === "error" && (
+          <p className="form-banner form-banner-error" role="alert">
+            {publishError}
+          </p>
+        )}
+
+        <div className="admin-grid">
           <div className="admin-panel admin-list-panel">
             <div className="admin-list-header">
               <h2>Albums</h2>
@@ -647,7 +467,7 @@ export default function Admin() {
                         <button
                           type="button"
                           className="admin-album-edit"
-                          onClick={() => requestEditAlbum(album.id)}
+                          onClick={() => requestSetWorkshop({ type: "edit", albumId: album.id })}
                           aria-label={`Edit ${album.title}`}
                         >
                           <IconEdit />
@@ -682,25 +502,49 @@ export default function Admin() {
             )}
           </div>
 
-          {editingAlbum && (
-            <AlbumDrawer
-              key={editingAlbum.id}
-              album={editingAlbum}
-              photos={items.filter((item) => item.albumId === editingAlbum.id)}
-              authFetch={authFetch}
-              onClose={closeDrawer}
-              onDirtyChange={setDrawerIsDirty}
-              onRenameAlbum={(newTitle) =>
-                setAlbums((prev) =>
-                  prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
-                )
-              }
-              onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
-              onSavePhotos={(newAlbumPhotos) =>
-                setItems((prev) => applyAlbumPhotos(prev, editingAlbum.id, newAlbumPhotos))
-              }
-            />
-          )}
+          <div
+            className="admin-workshop-panel"
+            data-theme={editingAlbum ? editingAlbum.category : undefined}
+          >
+            {workshop?.type === "add" && (
+              <AddAlbumPanel
+                authFetch={authFetch}
+                onClose={closeWorkshop}
+                onDirtyChange={setWorkshopIsDirty}
+                onAlbumCreated={handleAlbumCreated}
+              />
+            )}
+
+            {workshop?.type === "edit" && editingAlbum && (
+              <AlbumDrawer
+                key={editingAlbum.id}
+                album={editingAlbum}
+                photos={items.filter((item) => item.albumId === editingAlbum.id)}
+                authFetch={authFetch}
+                onClose={closeWorkshop}
+                onDirtyChange={setWorkshopIsDirty}
+                onRenameAlbum={(newTitle) =>
+                  setAlbums((prev) =>
+                    prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
+                  )
+                }
+                onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
+                onSavePhotos={(newAlbumPhotos) =>
+                  setItems((prev) => applyAlbumPhotos(prev, editingAlbum.id, newAlbumPhotos))
+                }
+              />
+            )}
+
+            {!workshop && (
+              <div className="admin-workshop-empty">
+                <span className="eyebrow">Workshop</span>
+                <p>
+                  Select an album to edit, or click &ldquo;Add New Album&rdquo; above
+                  to create one.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

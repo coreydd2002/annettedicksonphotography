@@ -135,11 +135,7 @@ export default function AlbumDrawer({
   const category = getCategory(album.category);
 
   return (
-    <div
-      className="admin-panel admin-drawer-panel"
-      data-theme={album.category}
-      aria-label={`Edit ${album.title}`}
-    >
+    <div data-theme={album.category} aria-label={`Edit ${album.title}`}>
       <span className="eyebrow">{category?.label || album.category}</span>
       <input
         type="text"
