@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
+import Lightbox from "../../components/Lightbox/Lightbox";
 import { IconDragHandle } from "../../components/icons";
 import { getCategory } from "../../../shared/categories";
 import AddPhotoModal from "./AddPhotoModal";
@@ -34,6 +35,7 @@ export default function AlbumDrawer({
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
   const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -123,14 +125,16 @@ export default function AlbumDrawer({
   };
 
   useEffect(() => {
-    if (addPhotoOpen || deleteConfirmPhoto || showCancelConfirm) return undefined;
+    if (addPhotoOpen || deleteConfirmPhoto || showCancelConfirm || lightboxIndex !== null) {
+      return undefined;
+    }
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleCancelRequest();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPhotoOpen, deleteConfirmPhoto, showCancelConfirm, isDirty]);
+  }, [addPhotoOpen, deleteConfirmPhoto, showCancelConfirm, lightboxIndex, isDirty]);
 
   const category = getCategory(album.category);
 
@@ -145,21 +149,15 @@ export default function AlbumDrawer({
         aria-label="Album title"
       />
 
-      <button
-        type="button"
-        className="btn btn-outline admin-drawer-add-btn"
-        onClick={() => setAddPhotoOpen(true)}
-      >
-        Add Photo
-      </button>
-
       {draftPhotos.length === 0 ? (
         <p className="admin-empty">No photos in this album yet.</p>
       ) : (
         <>
-          <p className="admin-list-hint">Drag a photo to reorder it.</p>
+          <p className="admin-list-hint">
+            Drag a photo to reorder it — the first photo is the album&rsquo;s cover.
+          </p>
           <ul className="admin-drawer-photo-list">
-            {draftPhotos.map((photo) => (
+            {draftPhotos.map((photo, index) => (
               <li
                 key={photo.id}
                 className={`admin-photo-card ${
@@ -175,14 +173,26 @@ export default function AlbumDrawer({
                 <span className="admin-drag-handle" aria-label="Drag to reorder">
                   <IconDragHandle />
                 </span>
-                <PlaceholderImage
-                  src={photo.src}
-                  alt={photo.title}
-                  variant={photo.variant}
-                  aspect={photo.aspect}
-                  draggable={false}
-                  className="admin-photo-thumb"
-                />
+                <div className="admin-photo-thumb-wrap">
+                  {index === 0 && (
+                    <span className="admin-cover-badge">Album Cover</span>
+                  )}
+                  <button
+                    type="button"
+                    className={`admin-thumb-btn ${index === 0 ? "is-cover" : ""}`}
+                    onClick={() => setLightboxIndex(index)}
+                    aria-label={`View ${photo.title}`}
+                  >
+                    <PlaceholderImage
+                      src={photo.src}
+                      alt={photo.title}
+                      variant={photo.variant}
+                      aspect={photo.aspect}
+                      draggable={false}
+                      className="admin-photo-thumb"
+                    />
+                  </button>
+                </div>
                 <div className="admin-photo-meta">
                   {renamingPhotoId === photo.id ? (
                     <input
@@ -226,6 +236,14 @@ export default function AlbumDrawer({
         </>
       )}
 
+      <button
+        type="button"
+        className="btn btn-outline admin-drawer-add-btn"
+        onClick={() => setAddPhotoOpen(true)}
+      >
+        Add Photo
+      </button>
+
       <div className="admin-drawer-save-row">
         <button type="button" className="btn btn-outline" onClick={handleCancelRequest}>
           Cancel
@@ -239,13 +257,15 @@ export default function AlbumDrawer({
         Redeploy&rdquo; on the main screen when you&rsquo;re ready to publish.</em>
       </p>
 
-      <button
-        type="button"
-        className="btn btn-outline admin-drawer-delete-album"
-        onClick={onDeleteAlbumRequest}
-      >
-        Delete Album
-      </button>
+      <div className="admin-drawer-delete-album-row">
+        <button
+          type="button"
+          className="btn btn-outline admin-drawer-delete-album"
+          onClick={onDeleteAlbumRequest}
+        >
+          Delete Album
+        </button>
+      </div>
 
       {addPhotoOpen && (
         <AddPhotoModal
@@ -282,6 +302,18 @@ export default function AlbumDrawer({
             onClose();
           }}
           onCancel={() => setShowCancelConfirm(false)}
+        />
+      )}
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          items={draftPhotos}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onPrev={() =>
+            setLightboxIndex((i) => (i - 1 + draftPhotos.length) % draftPhotos.length)
+          }
+          onNext={() => setLightboxIndex((i) => (i + 1) % draftPhotos.length)}
         />
       )}
     </div>

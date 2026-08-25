@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
 import { IconEdit, IconEye, IconEyeOff } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
+import Lightbox from "../../components/Lightbox/Lightbox";
 import ConfirmDialog from "./ConfirmDialog";
 import AlbumDrawer from "./AlbumDrawer";
 import AddAlbumPanel from "./AddAlbumPanel";
@@ -83,6 +84,7 @@ export default function Admin() {
   const [workshop, setWorkshop] = useState(null); // null | { type: "add" } | { type: "edit", albumId }
   const [workshopIsDirty, setWorkshopIsDirty] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [lightbox, setLightbox] = useState(null); // null | { photos, index }
 
   const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
   const [publishError, setPublishError] = useState("");
@@ -479,16 +481,23 @@ export default function Admin() {
                           {photos.length === 0 ? (
                             <li className="admin-empty">No photos yet.</li>
                           ) : (
-                            photos.map((photo) => (
+                            photos.map((photo, index) => (
                               <li key={photo.id} className="admin-album-photo-row">
-                                <PlaceholderImage
-                                  src={photo.src}
-                                  alt={photo.title}
-                                  variant={photo.variant}
-                                  aspect="1 / 1"
-                                  showIcon={false}
-                                  className="admin-album-photo-thumb"
-                                />
+                                <button
+                                  type="button"
+                                  className="admin-thumb-btn"
+                                  onClick={() => setLightbox({ photos, index })}
+                                  aria-label={`View ${photo.title}`}
+                                >
+                                  <PlaceholderImage
+                                    src={photo.src}
+                                    alt={photo.title}
+                                    variant={photo.variant}
+                                    aspect="1 / 1"
+                                    showIcon={false}
+                                    className="admin-album-photo-thumb"
+                                  />
+                                </button>
                                 <span className="admin-album-photo-title">{photo.title}</span>
                               </li>
                             ))
@@ -549,6 +558,26 @@ export default function Admin() {
       </div>
 
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} />}
+
+      {lightbox && (
+        <Lightbox
+          items={lightbox.photos}
+          currentIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onPrev={() =>
+            setLightbox((prev) => ({
+              ...prev,
+              index: (prev.index - 1 + prev.photos.length) % prev.photos.length,
+            }))
+          }
+          onNext={() =>
+            setLightbox((prev) => ({
+              ...prev,
+              index: (prev.index + 1) % prev.photos.length,
+            }))
+          }
+        />
+      )}
     </section>
   );
 }

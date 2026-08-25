@@ -55,10 +55,10 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  /* Wider than the site's public --container-width: the Albums list and
-     the workshop panel are each roughly half-width, so they need more
-     total room than the public-facing pages do. */
-  max-width: 1440px;
+  /* This is a working tool, not a reading page — drop the site's public
+     --container-width cap (and its centering gutters) so the Albums list
+     and workshop panel can use the full browser width. */
+  max-width: none;
 }
 
 .admin-header-row {
@@ -369,6 +369,55 @@
   overflow: hidden;
 }
 
+/* Wraps a thumbnail (in the album list or the editing panel) to make it
+   clickable, opening that photo in the same Lightbox the public galleries
+   use — without changing how the thumbnail itself looks. */
+.admin-thumb-btn {
+  display: block;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.admin-thumb-btn:hover,
+.admin-thumb-btn:focus-visible {
+  opacity: 0.85;
+}
+
+/* Marks the first photo in the editing panel's list as the album's cover —
+   whichever photo is dragged into this slot becomes the public cover. */
+.admin-photo-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.admin-cover-badge {
+  font-family: var(--font-body);
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--theme-accent-dark, var(--color-lavender-dark));
+  white-space: nowrap;
+}
+
+.admin-thumb-btn.is-cover {
+  border: 2px solid var(--theme-accent, var(--color-lavender));
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.admin-thumb-btn.is-cover .admin-photo-thumb {
+  border-radius: 2px;
+}
+
 .admin-photo-meta {
   display: flex;
   flex-direction: column;
@@ -675,12 +724,18 @@
 
 .admin-drawer-add-btn {
   width: 100%;
-  margin-bottom: 20px;
+  margin-top: 20px;
+}
+
+.admin-drawer-delete-album-row {
+  margin-top: 28px;
+  text-align: center;
 }
 
 .admin-drawer-delete-album {
-  width: 100%;
-  margin-top: 28px;
+  width: auto;
+  padding: 8px 16px;
+  font-size: 0.7rem;
   border-color: #d9433a;
   color: #d9433a;
 }
