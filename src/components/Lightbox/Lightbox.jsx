@@ -26,12 +26,7 @@ export default function Lightbox({ items, currentIndex, onClose, onPrev, onNext 
   if (!item) return null;
 
   return (
-    <div
-      className="lightbox"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${item.title} — ${item.category}`}
-    >
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.title}>
       <div className="lightbox-backdrop" onClick={onClose} />
 
       <button
@@ -62,7 +57,6 @@ export default function Lightbox({ items, currentIndex, onClose, onPrev, onNext 
         />
         <p className="lightbox-caption">
           <span className="lightbox-title">{item.title}</span>
-          <span className="lightbox-category">{item.category}</span>
         </p>
       </div>
 

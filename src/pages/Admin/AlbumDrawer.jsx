@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import Lightbox from "../../components/Lightbox/Lightbox";
-import { IconDragHandle } from "../../components/icons";
+import { IconDragHandle, IconEdit } from "../../components/icons";
 import { getCategory } from "../../../shared/categories";
 import AddPhotoModal from "./AddPhotoModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -141,13 +141,16 @@ export default function AlbumDrawer({
   return (
     <div data-theme={album.category} aria-label={`Edit ${album.title}`}>
       <span className="eyebrow">{category?.label || album.category}</span>
-      <input
-        type="text"
-        className="admin-drawer-title-input"
-        value={draftTitle}
-        onChange={(event) => setDraftTitle(event.target.value)}
-        aria-label="Album title"
-      />
+      <div className="admin-drawer-title-row">
+        <IconEdit className="admin-drawer-title-icon" aria-hidden="true" />
+        <input
+          type="text"
+          className="admin-drawer-title-input"
+          value={draftTitle}
+          onChange={(event) => setDraftTitle(event.target.value)}
+          aria-label="Album title"
+        />
+      </div>
 
       {draftPhotos.length === 0 ? (
         <p className="admin-empty">No photos in this album yet.</p>

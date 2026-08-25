@@ -10,7 +10,7 @@ export default function GalleryGrid({ items, onItemClick }) {
             type="button"
             className="gallery-tile"
             onClick={() => onItemClick(index)}
-            aria-label={`View ${item.title} — ${item.category}`}
+            aria-label={`View ${item.title}`}
           >
             <PlaceholderImage
               src={item.src}
@@ -21,7 +21,6 @@ export default function GalleryGrid({ items, onItemClick }) {
             />
             <span className="gallery-tile-overlay">
               <span className="gallery-tile-title">{item.title}</span>
-              <span className="gallery-tile-category">{item.category}</span>
             </span>
           </button>
         </li>
