@@ -1,20 +1,17 @@
 import { useEffect, useState } from "react";
-import {
-  detectImageAspect,
-  fileToDataUrl,
-  humanizeFilename,
-  MAX_IMAGE_BYTES,
-} from "./utils";
+import { detectImageAspect, humanizeFilename, MAX_IMAGE_BYTES } from "./utils";
+import { uploadPhotoBlob, generateAlbumId } from "./blobUpload";
 import { CATEGORIES } from "../../../shared/categories";
 import ConfirmDialog from "./ConfirmDialog";
 
 let pendingFileCounter = 0;
+const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 
 // Mirrors AlbumDrawer's Save/Cancel pattern: nothing is created until
 // "Save" is clicked, and Cancel confirms first if there's anything to lose
 // (a typed name or selected photos). Unlike the drawer, there's no existing
 // album to restore on cancel — cancelling just clears the form.
-export default function AddAlbumPanel({ authFetch, onClose, onDirtyChange, onAlbumCreated }) {
+export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCreated }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0].key);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -50,7 +47,7 @@ export default function AddAlbumPanel({ authFetch, onClose, onDirtyChange, onAlb
         pendingFileCounter += 1;
         const id = `${Date.now()}-${pendingFileCounter}`;
         if (file.size > MAX_IMAGE_BYTES) {
-          return { id, file, name: file.name, error: "Over 3MB" };
+          return { id, file, name: file.name, error: `Over ${MAX_IMAGE_MB_LABEL}` };
         }
         try {
           const aspect = await detectImageAspect(file);
@@ -71,12 +68,13 @@ export default function AddAlbumPanel({ authFetch, onClose, onDirtyChange, onAlb
   const canSave =
     title.trim() && pendingFiles.some((entry) => !entry.error) && status !== "submitting";
 
-  // Creates the album (via the first upload) and uploads every valid
-  // pending photo to it, one at a time. Each successfully uploaded photo
-  // (and the newly created album, the first time) is handed up via
+  // Creates the album locally (id generated client-side — see
+  // blobUpload.js) and uploads every valid pending photo to it, one at a
+  // time, straight to Blob storage. Each successfully uploaded photo (and
+  // the newly created album, the first time) is handed up via
   // onAlbumCreated immediately — so a failure partway through still leaves
-  // whatever succeeded staged, and retrying "Save" continues into the
-  // same album rather than creating a duplicate.
+  // whatever succeeded staged, and retrying "Save" continues into the same
+  // album rather than creating a duplicate.
   const handleSave = async () => {
     if (!canSave) return;
 
@@ -84,52 +82,42 @@ export default function AddAlbumPanel({ authFetch, onClose, onDirtyChange, onAlb
     setStatus("submitting");
     setError("");
 
-    let album = createdAlbum;
-    const albumIsNew = !album;
+    const albumIsNew = !createdAlbum;
+    const album = createdAlbum ?? {
+      id: generateAlbumId(title.trim()),
+      title: title.trim(),
+      category,
+    };
+    if (albumIsNew) setCreatedAlbum(album);
+
     const succeededIds = new Set();
     const newItems = [];
     let uploadError = "";
 
     for (const entry of validEntries) {
       try {
-        const imageDataUrl = await fileToDataUrl(entry.file);
-        const body = album
-          ? {
-              title: humanizeFilename(entry.name),
-              aspect: entry.aspect,
-              imageDataUrl,
-              albumId: album.id,
-              category: album.category,
-            }
-          : {
-              title: humanizeFilename(entry.name),
-              aspect: entry.aspect,
-              imageDataUrl,
-              newAlbum: { title: title.trim(), category },
-            };
-
-        const response = await authFetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+        const photoTitle = humanizeFilename(entry.name);
+        const { id, src } = await uploadPhotoBlob({
+          file: entry.file,
+          title: photoTitle,
+          albumId: album.id,
+          token,
         });
-        const data = await response.json();
-
-        if (!response.ok) {
-          uploadError = data.error || "Something went wrong uploading one of the photos.";
-          break;
-        }
-
-        if (data.album) album = data.album;
-        newItems.push(data.item);
+        newItems.push({
+          id,
+          albumId: album.id,
+          category: album.category,
+          title: photoTitle,
+          aspect: entry.aspect,
+          src,
+        });
         succeededIds.add(entry.id);
-      } catch {
-        uploadError = "Something went wrong uploading one of the photos.";
+      } catch (err) {
+        uploadError = err.message || "Something went wrong uploading one of the photos.";
         break;
       }
     }
 
-    if (album && albumIsNew) setCreatedAlbum(album);
     setPendingFiles((prev) => prev.filter((entry) => !succeededIds.has(entry.id)));
     if (newItems.length) {
       onAlbumCreated({ album: albumIsNew ? album : null, items: newItems });
@@ -240,8 +228,8 @@ export default function AddAlbumPanel({ authFetch, onClose, onDirtyChange, onAlb
         </button>
       </div>
       <p className="admin-drawer-save-note">
-        <em>Saving doesn&rsquo;t redeploy the live site yet — use &ldquo;Save and
-        Redeploy&rdquo; above when you&rsquo;re ready to publish.</em>
+        <em>Saving stages this album — it won&rsquo;t go live until you click
+        &ldquo;Publish Changes&rdquo; above.</em>
       </p>
 
       {showCancelConfirm && (

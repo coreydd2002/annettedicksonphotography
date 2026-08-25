@@ -19,9 +19,8 @@ export default function PlaceholderImage({
     setFailed(false);
   }, [src]);
 
-  // Falls back to the gradient placeholder if the real photo can't load yet —
-  // e.g. right after an admin upload, before the git-triggered rebuild that
-  // actually makes the committed image file servable has finished.
+  // Falls back to the gradient placeholder if there's no src yet, or the
+  // real photo genuinely fails to load.
   if (src && !failed) {
     return (
       <img

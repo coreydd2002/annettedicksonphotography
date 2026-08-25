@@ -1,4 +1,5 @@
 import PlaceholderImage from "../PlaceholderImage/PlaceholderImage";
+import { getCategory } from "../../../shared/categories";
 import "./GalleryGrid.css";
 
 export default function GalleryGrid({ items, onItemClick }) {
@@ -15,7 +16,7 @@ export default function GalleryGrid({ items, onItemClick }) {
             <PlaceholderImage
               src={item.src}
               alt={item.title}
-              variant={item.variant}
+              variant={getCategory(item.category)?.variant}
               aspect={item.aspect}
               className="gallery-tile-image"
             />

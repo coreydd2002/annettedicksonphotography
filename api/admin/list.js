@@ -1,9 +1,5 @@
 import { checkAuthHeader } from "../_lib/auth.js";
-import {
-  ALBUMS_MANIFEST_PATH,
-  GALLERY_MANIFEST_PATH,
-  getManifest,
-} from "../_lib/github.js";
+import { getAllForAdmin } from "../_lib/db.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -16,13 +12,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const [{ items }, { items: albums }] = await Promise.all([
-      getManifest(GALLERY_MANIFEST_PATH),
-      getManifest(ALBUMS_MANIFEST_PATH),
-    ]);
+    const { items, albums } = await getAllForAdmin();
     return res.status(200).json({ items, albums });
   } catch (error) {
-    console.error("list: failed to read manifest", error);
-    return res.status(502).json({ error: "Failed to reach GitHub" });
+    console.error("list: failed to read from database", error);
+    return res.status(502).json({ error: "Failed to reach the database" });
   }
 }

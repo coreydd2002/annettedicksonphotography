@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AlbumGrid from "../../components/AlbumGrid/AlbumGrid";
-import albums from "../../../content/albums.json";
-import galleryItems from "../../../content/gallery.json";
 import { CATEGORIES } from "../../../shared/categories";
 import "./Galleries.css";
 
@@ -17,23 +15,41 @@ export default function Galleries() {
   const [activeFilter, setActiveFilter] = useState(() =>
     resolveFilter(searchParams.get("category")),
   );
+  const [albums, setAlbums] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | idle | error
 
   useEffect(() => {
     setActiveFilter(resolveFilter(searchParams.get("category")));
   }, [searchParams]);
 
-  const enrichedAlbums = useMemo(() => {
-    return albums.map((album) => {
-      const photos = galleryItems.filter((item) => item.albumId === album.id);
-      return { ...album, coverPhoto: photos[0], photoCount: photos.length };
-    });
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+
+    fetch("/api/albums")
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to load galleries");
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setAlbums(data.albums || []);
+        setStatus("idle");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredAlbums = useMemo(() => {
     return activeFilter === "all"
-      ? enrichedAlbums
-      : enrichedAlbums.filter((album) => album.category === activeFilter);
-  }, [activeFilter, enrichedAlbums]);
+      ? albums
+      : albums.filter((album) => album.category === activeFilter);
+  }, [activeFilter, albums]);
 
   const handleFilterChange = (key) => {
     setSearchParams(key === "all" ? {} : { category: key });
@@ -76,7 +92,17 @@ export default function Galleries() {
 
       <section className="section galleries-grid-section">
         <div className="container">
-          <AlbumGrid albums={filteredAlbums} />
+          {status === "error" ? (
+            <p className="galleries-status">
+              Couldn&rsquo;t load galleries right now — please try again soon.
+            </p>
+          ) : status === "loading" ? (
+            <p className="galleries-status">Loading…</p>
+          ) : filteredAlbums.length === 0 ? (
+            <p className="galleries-status">No albums here yet — check back soon.</p>
+          ) : (
+            <AlbumGrid albums={filteredAlbums} />
+          )}
         </div>
       </section>
     </>

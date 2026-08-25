@@ -1,12 +1,6 @@
+import { del } from "@vercel/blob";
 import { checkAuthHeader } from "../_lib/auth.js";
-import {
-  ALBUMS_MANIFEST_PATH,
-  GALLERY_MANIFEST_PATH,
-  deleteFile,
-  getFile,
-  getManifest,
-  putManifest,
-} from "../_lib/github.js";
+import { publishChanges } from "../_lib/db.js";
 import { CATEGORY_KEYS } from "../../shared/categories.js";
 
 const ASPECT_PATTERN = /^\d+ \/ \d+$/;
@@ -18,7 +12,7 @@ function isValidItem(item) {
   if (!CATEGORY_KEYS.has(item.category)) return false;
   if (typeof item.title !== "string" || !item.title.trim()) return false;
   if (typeof item.aspect !== "string" || !ASPECT_PATTERN.test(item.aspect)) return false;
-  if (item.src !== undefined && typeof item.src !== "string") return false;
+  if (typeof item.src !== "string" || !item.src) return false;
   return true;
 }
 
@@ -30,12 +24,13 @@ function isValidAlbum(album) {
   return true;
 }
 
-// The one action behind "Save and Redeploy". The client stages every add,
+// The one action behind "Publish Changes". The client stages every add,
 // delete, and reorder locally (see Admin.jsx) — this endpoint is the single
-// point where that staged state actually becomes the live manifests. New
-// photos' image files are already committed by upload.js by the time this
-// runs, so the payload here is just the final ordered items/albums lists,
-// not image data.
+// point where that staged state actually becomes live, in one atomic
+// database transaction (see publishChanges() in api/_lib/db.js). Photos'
+// image files are already uploaded to Blob storage by the time this runs
+// (client-direct uploads, see api/admin/blob-upload.js), so the payload
+// here is just the final ordered items/albums lists, no image data.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -65,7 +60,7 @@ export default async function handler(req, res) {
   }
 
   // Every photo must belong to a real, submitted album, and its (denormalized)
-  // category must match that album's category — keeps the two manifests from
+  // category must match that album's category — keeps the two tables from
   // drifting out of sync.
   const albumsById = new Map(submittedAlbums.map((album) => [album.id, album]));
   for (const item of submittedItems) {
@@ -96,97 +91,40 @@ export default async function handler(req, res) {
     });
   }
 
-  let liveItems;
-  let gallerySha;
-  let albumsSha;
-  try {
-    [{ items: liveItems, sha: gallerySha }, { sha: albumsSha }] = await Promise.all([
-      getManifest(GALLERY_MANIFEST_PATH),
-      getManifest(ALBUMS_MANIFEST_PATH),
-    ]);
-  } catch (error) {
-    console.error("publish: failed to read manifest", error);
-    return res.status(502).json({ error: "Failed to reach GitHub" });
-  }
-
-  const submittedIds = new Set(submittedItems.map((item) => String(item.id)));
-  const removedItems = liveItems.filter((item) => !submittedIds.has(String(item.id)));
-
   const finalAlbums = submittedAlbums.map((album) => ({
     id: album.id,
     title: album.title.trim(),
     category: album.category,
   }));
 
-  const finalItems = submittedItems.map((item) => {
-    const clean = {
-      id: item.id,
-      albumId: item.albumId,
-      category: item.category,
-      title: item.title.trim(),
-      aspect: item.aspect,
-    };
-    if (item.src) clean.src = item.src;
-    if (item.variant !== undefined) clean.variant = item.variant;
-    return clean;
-  });
+  const finalItems = submittedItems.map((item) => ({
+    id: item.id,
+    albumId: item.albumId,
+    category: item.category,
+    title: item.title.trim(),
+    aspect: item.aspect,
+    src: item.src,
+  }));
 
-  // Write albums.json first: if only this write succeeds, the failure mode
-  // is a harmless unused album (filtered out of Galleries automatically,
-  // since nothing references it yet). Writing gallery.json first would risk
-  // photos pointing at an album that doesn't exist yet, producing dead
-  // /albums/:slug links — worse.
+  let removedPhotos;
   try {
-    await putManifest(
-      finalAlbums,
-      albumsSha,
-      "Publish gallery changes",
-      ALBUMS_MANIFEST_PATH,
-    );
+    ({ removedPhotos } = await publishChanges({
+      albums: finalAlbums,
+      photos: finalItems,
+    }));
   } catch (error) {
-    console.error("publish: failed to update albums manifest", error);
-    if (error.status === 409) {
-      return res.status(409).json({
-        error: "The gallery changed since you loaded it — please refresh and retry.",
-      });
-    }
-    return res.status(502).json({ error: "Failed to update the albums manifest" });
+    console.error("publish: failed to write to database", error);
+    return res.status(502).json({ error: "Failed to update the database" });
   }
 
-  try {
-    await putManifest(
-      finalItems,
-      gallerySha,
-      "Publish gallery changes",
-      GALLERY_MANIFEST_PATH,
-    );
-  } catch (error) {
-    console.error("publish: failed to update gallery manifest", error);
-    if (error.status === 409) {
-      return res.status(409).json({
-        error: "The gallery changed since you loaded it — please refresh and retry.",
-      });
-    }
-    return res.status(502).json({ error: "Failed to update the gallery manifest" });
-  }
-
-  // Best-effort cleanup of removed photos' image files, AFTER both manifests
-  // (the part visitors actually see) are already safely updated. A failure
-  // here just leaves a harmless orphaned file, not a broken site.
-  for (const item of removedItems) {
-    if (!item.src) continue;
-    const imagePath = `public${item.src}`;
+  // Best-effort cleanup of removed photos' Blob files, AFTER the database
+  // (the part visitors actually see) is already safely updated. A failure
+  // here just leaves a harmless orphaned blob, not a broken site.
+  if (removedPhotos.length > 0) {
     try {
-      const file = await getFile(imagePath);
-      if (file) {
-        await deleteFile({
-          path: imagePath,
-          sha: file.sha,
-          message: `Remove gallery photo: ${item.title}`,
-        });
-      }
+      await del(removedPhotos.map((photo) => photo.src));
     } catch (error) {
-      console.error(`publish: failed to delete orphaned image ${imagePath}`, error);
+      console.error("publish: failed to delete orphaned blobs", error);
     }
   }
 

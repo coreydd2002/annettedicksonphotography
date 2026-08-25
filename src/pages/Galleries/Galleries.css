@@ -61,6 +61,11 @@
   padding-top: 0;
 }
 
+.galleries-status {
+  text-align: center;
+  color: var(--color-ink-soft);
+}
+
 @media (max-width: 600px) {
   .filter-tabs {
     justify-content: flex-start;

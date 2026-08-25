@@ -1,13 +1,4 @@
-// Mirrors api/admin/upload.js's MAX_IMAGE_BYTES — kept in sync manually
-// since client and serverless code aren't bundled together.
-export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-
-// Set in sessionStorage the moment a publish succeeds, and consumed by
-// App.jsx on the next full page load to redirect to Home. A hard refresh
-// remounts the whole app, wiping React state, so the "we just redeployed"
-// signal has to live somewhere that survives that — sessionStorage does,
-// and clears itself once the tab closes.
-export const REDEPLOY_REDIRECT_KEY = "adp_redeploy_redirect_pending";
+export { MAX_IMAGE_BYTES } from "../../../shared/images";
 
 function gcd(a, b) {
   return b === 0 ? a : gcd(b, a % b);
@@ -38,15 +29,6 @@ export function detectImageAspect(file) {
   });
 }
 
-export function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
-    reader.readAsDataURL(file);
-  });
-}
-
 // Turns a bulk-uploaded filename into a reasonable default photo title,
 // e.g. "garden_ceremony-01.jpg" -> "Garden Ceremony 01". Used by the "Add an
 // Album" flow, which uploads several photos at once without asking for a
@@ -59,4 +41,16 @@ export function humanizeFilename(filename) {
     (word) => word[0].toUpperCase() + word.slice(1).toLowerCase(),
   );
   return titleCased || "Untitled";
+}
+
+// Shared by photo ids (slugify(title) + "-" + uuid8, in blobUpload.js) and
+// album ids (same pattern, generateAlbumId() in blobUpload.js).
+export function slugify(value) {
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return slug || "photo";
 }

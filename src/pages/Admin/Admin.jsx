@@ -6,7 +6,6 @@ import Lightbox from "../../components/Lightbox/Lightbox";
 import ConfirmDialog from "./ConfirmDialog";
 import AlbumDrawer from "./AlbumDrawer";
 import AddAlbumPanel from "./AddAlbumPanel";
-import { REDEPLOY_REDIRECT_KEY } from "./utils";
 import { getCategory } from "../../../shared/categories";
 import "./Admin.css";
 
@@ -221,7 +220,7 @@ export default function Admin() {
       title: "Delete album?",
       message: `Delete "${album.title}" and ${photoCount} ${
         photoCount === 1 ? "photo" : "photos"
-      } in it? This won't take effect until you Save and Redeploy.`,
+      } in it? This won't take effect until you Publish Changes.`,
       confirmLabel: "Delete Album",
       onConfirm: () => {
         setAlbums((prev) => prev.filter((a) => a.id !== album.id));
@@ -271,17 +270,31 @@ export default function Admin() {
 
       if (!response.ok) {
         setPublishStatus("error");
-        setPublishError(data.error || "Could not save changes — please try again.");
+        setPublishError(data.error || "Could not publish changes — please try again.");
         return;
       }
 
-      sessionStorage.setItem(REDEPLOY_REDIRECT_KEY, "1");
+      // Publishing is now an instant database write with nothing to
+      // rebuild — update the "last published" snapshot directly from the
+      // response so hasPendingChanges clears right away, no reload needed.
+      setItems(data.items);
+      setAlbums(data.albums);
+      savedItemsRef.current = data.items;
+      savedAlbumsRef.current = data.albums;
       setPublishStatus("done");
     } catch {
       setPublishStatus("error");
-      setPublishError("Could not save changes — please try again.");
+      setPublishError("Could not publish changes — please try again.");
     }
   };
+
+  // "done" is a transient confirmation, not a screen — clear it after a
+  // few seconds so the banner doesn't linger.
+  useEffect(() => {
+    if (publishStatus !== "done") return undefined;
+    const timeout = setTimeout(() => setPublishStatus("idle"), 4000);
+    return () => clearTimeout(timeout);
+  }, [publishStatus]);
 
   if (!isAuthenticated) {
     return (
@@ -341,21 +354,6 @@ export default function Admin() {
     );
   }
 
-  if (publishStatus === "done") {
-    return (
-      <section className="section admin-section admin-redeploy-section">
-        <div className="container admin-redeploy-container">
-          <span className="eyebrow">Saved</span>
-          <h1>Redeploying…</h1>
-          <p>
-            Your changes are saved and the site is rebuilding. This usually
-            takes a minute or two — wait a bit, then refresh this page.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
   const editingAlbum =
     workshop?.type === "edit"
       ? albums.find((album) => album.id === workshop.albumId) || null
@@ -389,7 +387,7 @@ export default function Admin() {
               onClick={handlePublish}
               disabled={!hasPendingChanges || publishStatus === "saving"}
             >
-              {publishStatus === "saving" ? "Saving & Redeploying…" : "Save and Redeploy"}
+              {publishStatus === "saving" ? "Publishing…" : "Publish Changes"}
             </button>
             <button
               type="button"
@@ -407,6 +405,11 @@ export default function Admin() {
         {publishStatus === "error" && (
           <p className="form-banner form-banner-error" role="alert">
             {publishError}
+          </p>
+        )}
+        {publishStatus === "done" && (
+          <p className="form-banner form-banner-success" role="status">
+            Changes published.
           </p>
         )}
 
@@ -492,7 +495,7 @@ export default function Admin() {
                                   <PlaceholderImage
                                     src={photo.src}
                                     alt={photo.title}
-                                    variant={photo.variant}
+                                    variant={getCategory(photo.category)?.variant}
                                     aspect="1 / 1"
                                     showIcon={false}
                                     className="admin-album-photo-thumb"
@@ -517,7 +520,7 @@ export default function Admin() {
           >
             {workshop?.type === "add" && (
               <AddAlbumPanel
-                authFetch={authFetch}
+                token={session?.token}
                 onClose={closeWorkshop}
                 onDirtyChange={setWorkshopIsDirty}
                 onAlbumCreated={handleAlbumCreated}
@@ -529,7 +532,7 @@ export default function Admin() {
                 key={editingAlbum.id}
                 album={editingAlbum}
                 photos={items.filter((item) => item.albumId === editingAlbum.id)}
-                authFetch={authFetch}
+                token={session?.token}
                 onClose={closeWorkshop}
                 onDirtyChange={setWorkshopIsDirty}
                 onRenameAlbum={(newTitle) =>

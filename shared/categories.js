@@ -1,10 +1,9 @@
 // Single source of truth for the shoot-type category enum, shared by the
 // Vite frontend (src/) and the Vercel Node functions (api/). This is CODE,
-// checked into git and deployed with the app — unlike content/gallery.json
-// and content/albums.json, which are DATA the admin panel rewrites live via
-// GitHub's Contents API. Never import those two manifests directly from
-// api/*.js; always go through getManifest()/putManifest() in
-// api/_lib/github.js.
+// checked into git and deployed with the app — unlike the `albums`/`photos`
+// tables in Postgres, which are DATA the admin panel reads/writes live via
+// api/_lib/db.js. The category CHECK constraints in db/schema.sql must be
+// kept in sync with this list by hand — SQL can't import a JS file.
 //
 // `variant` (0-4) maps each category to one of PlaceholderImage's five
 // gradient backgrounds (see PlaceholderImage.css), which are themed to match

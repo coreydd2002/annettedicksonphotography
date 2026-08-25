@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { IconClose } from "../../components/icons";
-import { detectImageAspect, fileToDataUrl, MAX_IMAGE_BYTES } from "./utils";
+import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
+import { uploadPhotoBlob } from "./blobUpload";
+
+const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 
 // Single-photo add form, presented as a popup rather than the sidebar panel
 // it started as. Always scoped to one already-known album, so — unlike the
-// old top-level form — it has no album/category picker of its own.
-export default function AddPhotoModal({ album, authFetch, onClose, onAdded }) {
+// bulk "Add an Album" flow — it has no album/category picker of its own.
+export default function AddPhotoModal({ album, token, onClose, onAdded }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -40,7 +43,7 @@ export default function AddPhotoModal({ album, authFetch, onClose, onAdded }) {
 
     if (selected.size > MAX_IMAGE_BYTES) {
       setFileError(
-        "Please use a photo under 3MB — consider resizing or reducing quality.",
+        `Please use a photo under ${MAX_IMAGE_MB_LABEL} — consider resizing or reducing quality.`,
       );
       return;
     }
@@ -68,30 +71,23 @@ export default function AddPhotoModal({ album, authFetch, onClose, onAdded }) {
     setError("");
 
     try {
-      const imageDataUrl = await fileToDataUrl(file);
-      const response = await authFetch("/api/admin/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          aspect: detectedAspect,
-          imageDataUrl,
-          albumId: album.id,
-          category: album.category,
-        }),
+      const { id, src } = await uploadPhotoBlob({
+        file,
+        title: title.trim(),
+        albumId: album.id,
+        token,
       });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setStatus("error");
-        setError(data.error || "Something went wrong — please try again.");
-        return;
-      }
-
-      onAdded(data.item);
-    } catch {
+      onAdded({
+        id,
+        albumId: album.id,
+        category: album.category,
+        title: title.trim(),
+        aspect: detectedAspect,
+        src,
+      });
+    } catch (err) {
       setStatus("error");
-      setError("Something went wrong — please try again.");
+      setError(err.message || "Something went wrong — please try again.");
     }
   };
 

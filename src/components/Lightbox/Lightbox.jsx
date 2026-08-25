@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import PlaceholderImage from "../PlaceholderImage/PlaceholderImage";
 import { IconClose, IconChevronLeft, IconChevronRight } from "../icons";
+import { getCategory } from "../../../shared/categories";
 import "./Lightbox.css";
 
 export default function Lightbox({ items, currentIndex, onClose, onPrev, onNext }) {
@@ -51,7 +52,7 @@ export default function Lightbox({ items, currentIndex, onClose, onPrev, onNext 
         <PlaceholderImage
           src={item.src}
           alt={item.title}
-          variant={item.variant}
+          variant={getCategory(item.category)?.variant}
           aspect={item.aspect}
           className="lightbox-image"
         />

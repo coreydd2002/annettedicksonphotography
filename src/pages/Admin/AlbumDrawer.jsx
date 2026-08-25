@@ -17,11 +17,11 @@ import ConfirmDialog from "./ConfirmDialog";
 // swapping albums out from under a dirty draft) is confirmed first. This is
 // still just local React state, one step removed from the live site: "Save"
 // here only updates the admin's staged list — publishing still requires
-// "Save and Redeploy" on the main screen.
+// "Publish Changes" on the main screen.
 export default function AlbumDrawer({
   album,
   photos,
-  authFetch,
+  token,
   onClose,
   onDirtyChange,
   onRenameAlbum,
@@ -189,7 +189,7 @@ export default function AlbumDrawer({
                     <PlaceholderImage
                       src={photo.src}
                       alt={photo.title}
-                      variant={photo.variant}
+                      variant={getCategory(photo.category)?.variant}
                       aspect={photo.aspect}
                       draggable={false}
                       className="admin-photo-thumb"
@@ -256,8 +256,8 @@ export default function AlbumDrawer({
         </button>
       </div>
       <p className="admin-drawer-save-note">
-        <em>Saving doesn&rsquo;t redeploy the live site yet — use &ldquo;Save and
-        Redeploy&rdquo; on the main screen when you&rsquo;re ready to publish.</em>
+        <em>Saving stages this album — it won&rsquo;t go live until you click
+        &ldquo;Publish Changes&rdquo; on the main screen.</em>
       </p>
 
       <div className="admin-drawer-delete-album-row">
@@ -273,7 +273,7 @@ export default function AlbumDrawer({
       {addPhotoOpen && (
         <AddPhotoModal
           album={album}
-          authFetch={authFetch}
+          token={token}
           onClose={() => setAddPhotoOpen(false)}
           onAdded={(item) => {
             setDraftPhotos((prev) => [...prev, item]);
