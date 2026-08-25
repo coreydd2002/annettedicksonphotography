@@ -23,16 +23,8 @@
   z-index: 2;
   display: block;
   overflow: hidden;
+  border: 1px solid var(--color-border);
   border-radius: 2px;
-}
-
-.album-tile-frame .album-tile-image {
-  transition: transform 0.4s ease;
-}
-
-.album-tile:hover .album-tile-frame .album-tile-image,
-.album-tile:focus-visible .album-tile-frame .album-tile-image {
-  transform: scale(1.04);
 }
 
 /* A couple of extra "photos" peeking out from behind the cover, hinting
@@ -100,7 +92,8 @@
 
 .album-tile-title {
   font-family: var(--font-heading);
-  font-size: 1.2rem;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--color-ink);
   transition: color 0.2s ease;
 }
