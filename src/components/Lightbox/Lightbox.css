@@ -32,21 +32,6 @@
   object-fit: contain;
 }
 
-.lightbox-caption {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: var(--color-white);
-  margin: 0;
-  text-align: center;
-}
-
-.lightbox-title {
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-}
-
 .lightbox-close,
 .lightbox-nav {
   position: absolute;

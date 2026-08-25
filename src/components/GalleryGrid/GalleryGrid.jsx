@@ -20,9 +20,6 @@ export default function GalleryGrid({ items, onItemClick }) {
               aspect={item.aspect}
               className="gallery-tile-image"
             />
-            <span className="gallery-tile-overlay">
-              <span className="gallery-tile-title">{item.title}</span>
-            </span>
           </button>
         </li>
       ))}

@@ -7,17 +7,70 @@
 .album-tile {
   position: relative;
   display: block;
+}
+
+/* The visible, clipped card — the stack layers behind it are deliberately
+   siblings, not children, of this frame, so their fanned-out corners can
+   peek out past its rounded edges instead of being clipped along with it. */
+.album-tile-frame {
+  position: relative;
+  z-index: 2;
+  display: block;
   overflow: hidden;
   border-radius: 2px;
 }
 
-.album-tile .album-tile-image {
+.album-tile-frame .album-tile-image {
   transition: transform 0.4s ease;
 }
 
-.album-tile:hover .album-tile-image,
-.album-tile:focus-visible .album-tile-image {
+.album-tile:hover .album-tile-frame .album-tile-image,
+.album-tile:focus-visible .album-tile-frame .album-tile-image {
   transform: scale(1.04);
+}
+
+/* A couple of extra "photos" peeking out from behind the cover, hinting
+   there's more inside the album. Reuses the cover image itself — only
+   slivers of these ever show, so a repeated image reads fine. */
+.album-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.album-stack-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: 0 4px 14px rgba(26, 26, 26, 0.22);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.album-stack-layer .album-stack-image {
+  width: 100%;
+  height: 100%;
+}
+
+.album-stack-layer-1 {
+  z-index: 2;
+  transform: rotate(-4deg) translate(-5px, 4px) scale(0.96);
+}
+
+.album-stack-layer-2 {
+  z-index: 1;
+  transform: rotate(5deg) translate(6px, 6px) scale(0.93);
+}
+
+.album-tile:hover .album-stack-layer-1,
+.album-tile:focus-visible .album-stack-layer-1 {
+  transform: rotate(-11deg) translate(-14px, 9px) scale(0.96);
+}
+
+.album-tile:hover .album-stack-layer-2,
+.album-tile:focus-visible .album-stack-layer-2 {
+  transform: rotate(12deg) translate(15px, 11px) scale(0.93);
 }
 
 .album-tile-overlay {

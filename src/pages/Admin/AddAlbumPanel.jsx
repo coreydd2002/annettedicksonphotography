@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { detectImageAspect, humanizeFilename, MAX_IMAGE_BYTES } from "./utils";
+import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
 import { uploadPhotoBlob, generateAlbumId } from "./blobUpload";
 import { CATEGORIES } from "../../../shared/categories";
 import ConfirmDialog from "./ConfirmDialog";
@@ -96,10 +96,9 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCr
 
     for (const entry of validEntries) {
       try {
-        const photoTitle = humanizeFilename(entry.name);
         const { id, src } = await uploadPhotoBlob({
           file: entry.file,
-          title: photoTitle,
+          title: entry.name,
           albumId: album.id,
           token,
         });
@@ -107,7 +106,7 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCr
           id,
           albumId: album.id,
           category: album.category,
-          title: photoTitle,
+          title: entry.name,
           aspect: entry.aspect,
           src,
         });

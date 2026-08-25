@@ -30,8 +30,6 @@ export default function AlbumDrawer({
 }) {
   const [draftTitle, setDraftTitle] = useState(album.title);
   const [draftPhotos, setDraftPhotos] = useState(photos);
-  const [renamingPhotoId, setRenamingPhotoId] = useState(null);
-  const [renameDraft, setRenameDraft] = useState("");
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
   const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -47,21 +45,6 @@ export default function AlbumDrawer({
     onDirtyChange?.(isDirty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
-
-  const startRenamePhoto = (photo) => {
-    setRenamingPhotoId(photo.id);
-    setRenameDraft(photo.title);
-  };
-
-  const commitRenamePhoto = (photo) => {
-    const trimmed = renameDraft.trim();
-    if (trimmed && trimmed !== photo.title) {
-      setDraftPhotos((prev) =>
-        prev.map((p) => (p.id === photo.id ? { ...p, title: trimmed } : p)),
-      );
-    }
-    setRenamingPhotoId(null);
-  };
 
   const handleDragStart = (event, id) => {
     setDraggedId(id);
@@ -197,34 +180,9 @@ export default function AlbumDrawer({
                   </button>
                 </div>
                 <div className="admin-photo-meta">
-                  {renamingPhotoId === photo.id ? (
-                    <input
-                      type="text"
-                      className="admin-photo-rename-input"
-                      value={renameDraft}
-                      onChange={(event) => setRenameDraft(event.target.value)}
-                      onBlur={() => commitRenamePhoto(photo)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      aria-label={`Rename ${photo.title}`}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className="admin-photo-title">{photo.title}</span>
-                  )}
+                  <span className="admin-photo-title">{photo.title}</span>
                 </div>
                 <div className="admin-photo-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline admin-rename-btn"
-                    onClick={() => startRenamePhoto(photo)}
-                  >
-                    Rename
-                  </button>
                   <button
                     type="button"
                     className="btn btn-outline admin-delete-btn"

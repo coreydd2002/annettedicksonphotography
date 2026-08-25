@@ -56,9 +56,6 @@ export default function Lightbox({ items, currentIndex, onClose, onPrev, onNext 
           aspect={item.aspect}
           className="lightbox-image"
         />
-        <p className="lightbox-caption">
-          <span className="lightbox-title">{item.title}</span>
-        </p>
       </div>
 
       <button

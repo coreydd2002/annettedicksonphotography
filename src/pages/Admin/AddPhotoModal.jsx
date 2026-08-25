@@ -9,7 +9,6 @@ const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 // it started as. Always scoped to one already-known album, so — unlike the
 // bulk "Add an Album" flow — it has no album/category picker of its own.
 export default function AddPhotoModal({ album, token, onClose, onAdded }) {
-  const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [detectedAspect, setDetectedAspect] = useState("");
@@ -61,9 +60,9 @@ export default function AddPhotoModal({ album, token, onClose, onAdded }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!title.trim() || !file || !detectedAspect) {
+    if (!file || !detectedAspect) {
       setStatus("error");
-      setError("Please add a title and choose a photo before saving.");
+      setError("Please choose a photo before saving.");
       return;
     }
 
@@ -73,7 +72,7 @@ export default function AddPhotoModal({ album, token, onClose, onAdded }) {
     try {
       const { id, src } = await uploadPhotoBlob({
         file,
-        title: title.trim(),
+        title: file.name,
         albumId: album.id,
         token,
       });
@@ -81,7 +80,7 @@ export default function AddPhotoModal({ album, token, onClose, onAdded }) {
         id,
         albumId: album.id,
         category: album.category,
-        title: title.trim(),
+        title: file.name,
         aspect: detectedAspect,
         src,
       });
@@ -120,18 +119,6 @@ export default function AddPhotoModal({ album, token, onClose, onAdded }) {
 
         <form className="admin-upload-form" onSubmit={handleSubmit}>
           <div className="form-row">
-            <label htmlFor="add-photo-title">Title</label>
-            <input
-              id="add-photo-title"
-              type="text"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              required
-              autoFocus
-            />
-          </div>
-
-          <div className="form-row">
             <label htmlFor="add-photo-file">Photo</label>
             <input
               id="add-photo-file"
@@ -139,6 +126,7 @@ export default function AddPhotoModal({ album, token, onClose, onAdded }) {
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
               required
+              autoFocus
             />
           </div>
 

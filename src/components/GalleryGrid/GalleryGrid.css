@@ -24,29 +24,3 @@
 .gallery-tile:focus-visible .gallery-tile-image {
   transform: scale(1.04);
 }
-
-.gallery-tile-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(26, 26, 26, 0.55);
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  color: var(--color-white);
-  text-align: center;
-  padding: 16px;
-}
-
-.gallery-tile:hover .gallery-tile-overlay,
-.gallery-tile:focus-visible .gallery-tile-overlay {
-  opacity: 1;
-}
-
-.gallery-tile-title {
-  font-family: var(--font-heading);
-  font-size: 1.2rem;
-}
