@@ -49,9 +49,6 @@ export default function AlbumGrid({ albums }) {
               </span>
               <span className="album-tile-caption">
                 <span className="album-tile-title">{album.title}</span>
-                <span className="album-tile-meta">
-                  {album.photoCount} {album.photoCount === 1 ? "Photo" : "Photos"}
-                </span>
               </span>
             </Link>
           </li>

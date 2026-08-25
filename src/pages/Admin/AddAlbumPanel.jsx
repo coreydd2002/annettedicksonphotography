@@ -7,11 +7,12 @@ import ConfirmDialog from "./ConfirmDialog";
 let pendingFileCounter = 0;
 const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 
-// Mirrors AlbumDrawer's Save/Cancel pattern: nothing is created until
-// "Save" is clicked, and Cancel confirms first if there's anything to lose
-// (a typed name or selected photos). Unlike the drawer, there's no existing
-// album to restore on cancel — cancelling just clears the form.
-export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCreated }) {
+// Mirrors AlbumDrawer's Upload Changes/Cancel pattern: nothing is created
+// until "Upload Changes" is clicked, and Cancel confirms first if there's
+// anything to lose (a typed name or selected photos). Unlike the drawer,
+// there's no existing album to restore on cancel — cancelling just clears
+// the form.
+export default function AddAlbumPanel({ token, onClose, onDirtyChange, onSaveNewAlbum }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0].key);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -70,11 +71,11 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCr
 
   // Creates the album locally (id generated client-side — see
   // blobUpload.js) and uploads every valid pending photo to it, one at a
-  // time, straight to Blob storage. Each successfully uploaded photo (and
-  // the newly created album, the first time) is handed up via
-  // onAlbumCreated immediately — so a failure partway through still leaves
-  // whatever succeeded staged, and retrying "Save" continues into the same
-  // album rather than creating a duplicate.
+  // time, straight to Blob storage — then pushes the album and however many
+  // photos made it through live to the database in one call. A failure
+  // partway through the upload loop still publishes whatever succeeded, and
+  // retrying "Upload Changes" continues into the same album (and builds on
+  // top of what's already live) rather than creating a duplicate.
   const handleSave = async () => {
     if (!canSave) return;
 
@@ -118,8 +119,19 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCr
     }
 
     setPendingFiles((prev) => prev.filter((entry) => !succeededIds.has(entry.id)));
-    if (newItems.length) {
-      onAlbumCreated({ album: albumIsNew ? album : null, items: newItems });
+
+    if (newItems.length === 0) {
+      setStatus("error");
+      setError(uploadError || "Please add at least one photo.");
+      return;
+    }
+
+    try {
+      await onSaveNewAlbum(album, newItems, albumIsNew);
+    } catch (err) {
+      setStatus("error");
+      setError(err.message || "Could not upload changes — please try again.");
+      return;
     }
 
     if (uploadError) {
@@ -223,13 +235,9 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onAlbumCr
           onClick={handleSave}
           disabled={!canSave}
         >
-          {status === "submitting" ? "Saving…" : "Save"}
+          {status === "submitting" ? "Uploading…" : "Upload Changes"}
         </button>
       </div>
-      <p className="admin-drawer-save-note">
-        <em>Saving stages this album — it won&rsquo;t go live until you click
-        &ldquo;Publish Changes&rdquo; above.</em>
-      </p>
 
       {showCancelConfirm && (
         <ConfirmDialog

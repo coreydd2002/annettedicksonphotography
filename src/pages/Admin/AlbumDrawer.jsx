@@ -1,41 +1,43 @@
 import { useEffect, useState } from "react";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import Lightbox from "../../components/Lightbox/Lightbox";
-import { IconDragHandle, IconEdit } from "../../components/icons";
+import { IconEdit, IconFrame, IconTrash } from "../../components/icons";
 import { getCategory } from "../../../shared/categories";
-import AddPhotoModal from "./AddPhotoModal";
+import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
+import { uploadPhotoBlob } from "./blobUpload";
 import ConfirmDialog from "./ConfirmDialog";
+
+const MAX_IMAGE_MB_LABEL = `${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
 
 // A persistent panel (not an overlay) that lives inline in the admin grid,
 // so the rest of the page stays interactive while it's open — e.g. clicking
 // a different album's edit button just swaps this panel's contents.
 //
-// Everything in here (title, renames, reorder, deletes, newly added photos)
-// is a local draft — nothing reaches the parent's staged items/albums until
-// "Save" is clicked. Because switching albums or discarding would silently
-// drop that draft, anything that could lose it (Cancel, or the parent
-// swapping albums out from under a dirty draft) is confirmed first. This is
-// still just local React state, one step removed from the live site: "Save"
-// here only updates the admin's staged list — publishing still requires
-// "Publish Changes" on the main screen.
+// Everything in here (title, reorder, deletes, newly added photos) is a
+// local draft — nothing reaches the database until "Upload Changes" is
+// clicked, which pushes it live immediately (see onSave, wired to
+// Admin.jsx's saveAlbumEdits). Because switching albums or discarding
+// would silently drop that in-flight draft, anything that could lose it
+// (Cancel, or the parent swapping albums out from under a dirty draft) is
+// confirmed first.
 export default function AlbumDrawer({
   album,
   photos,
   token,
   onClose,
   onDirtyChange,
-  onRenameAlbum,
   onDeleteAlbumRequest,
-  onSavePhotos,
+  onSave,
 }) {
   const [draftTitle, setDraftTitle] = useState(album.title);
   const [draftPhotos, setDraftPhotos] = useState(photos);
-  const [addPhotoOpen, setAddPhotoOpen] = useState(false);
+  const [addPhotoStatus, setAddPhotoStatus] = useState("idle"); // idle | uploading | error
+  const [addPhotoError, setAddPhotoError] = useState("");
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | error
+  const [saveError, setSaveError] = useState("");
   const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [draggedId, setDraggedId] = useState(null);
-  const [dragOverId, setDragOverId] = useState(null);
 
   const isDirty =
     draftTitle.trim() !== album.title ||
@@ -46,46 +48,55 @@ export default function AlbumDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
 
-  const handleDragStart = (event, id) => {
-    setDraggedId(id);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(id));
-  };
-
-  const handleDragOver = (event, id) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    if (id !== draggedId && dragOverId !== id) {
-      setDragOverId(id);
-    }
-  };
-
-  const handleDragLeave = (id) => {
-    setDragOverId((current) => (current === id ? null : current));
-  };
-
-  const handleDrop = (event, targetId) => {
-    event.preventDefault();
-    setDragOverId(null);
-
-    const sourceId = draggedId;
-    setDraggedId(null);
-    if (sourceId == null || sourceId === targetId) return;
-
+  // Moves a photo to the front of the list, making it the album's cover —
+  // the only reordering the list supports now that drag-to-reorder is gone.
+  const handleMakeCover = (photoId) => {
     setDraftPhotos((prev) => {
-      const fromIndex = prev.findIndex((photo) => photo.id === sourceId);
-      const toIndex = prev.findIndex((photo) => photo.id === targetId);
-      if (fromIndex === -1 || toIndex === -1) return prev;
-      const reordered = [...prev];
-      const [moved] = reordered.splice(fromIndex, 1);
-      reordered.splice(toIndex, 0, moved);
-      return reordered;
+      const index = prev.findIndex((photo) => photo.id === photoId);
+      if (index <= 0) return prev;
+      const next = [...prev];
+      const [photo] = next.splice(index, 1);
+      next.unshift(photo);
+      return next;
     });
   };
 
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
+  // Fires the instant a file is chosen from the native picker — no
+  // in-between popup to confirm or add a title to, unlike the old
+  // AddPhotoModal flow this replaced.
+  const handleAddPhotoFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setAddPhotoError("");
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setAddPhotoStatus("error");
+      setAddPhotoError(
+        `Please use a photo under ${MAX_IMAGE_MB_LABEL} — consider resizing or reducing quality.`,
+      );
+      return;
+    }
+
+    setAddPhotoStatus("uploading");
+    try {
+      const aspect = await detectImageAspect(file);
+      const { id, src } = await uploadPhotoBlob({
+        file,
+        title: file.name,
+        albumId: album.id,
+        token,
+      });
+      setDraftPhotos((prev) => [
+        ...prev,
+        { id, albumId: album.id, category: album.category, title: file.name, aspect, src },
+      ]);
+      setAddPhotoStatus("idle");
+    } catch (err) {
+      setAddPhotoStatus("error");
+      setAddPhotoError(err.message || "Something went wrong — please try again.");
+    }
   };
 
   const handleCancelRequest = () => {
@@ -96,19 +107,32 @@ export default function AlbumDrawer({
     }
   };
 
-  const handleSave = () => {
-    const trimmedTitle = draftTitle.trim();
-    if (trimmedTitle && trimmedTitle !== album.title) {
-      onRenameAlbum(trimmedTitle);
+  const handleSave = async () => {
+    const trimmedTitle = draftTitle.trim() || album.title;
+    if (!isDirty) {
+      onClose();
+      return;
     }
-    if (JSON.stringify(draftPhotos) !== JSON.stringify(photos)) {
-      onSavePhotos(draftPhotos);
+
+    setSaveStatus("saving");
+    setSaveError("");
+    try {
+      await onSave({ title: trimmedTitle, photos: draftPhotos });
+      onClose();
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError(err.message || "Could not upload changes — please try again.");
     }
-    onClose();
   };
 
   useEffect(() => {
-    if (addPhotoOpen || deleteConfirmPhoto || showCancelConfirm || lightboxIndex !== null) {
+    if (
+      addPhotoStatus === "uploading" ||
+      saveStatus === "saving" ||
+      deleteConfirmPhoto ||
+      showCancelConfirm ||
+      lightboxIndex !== null
+    ) {
       return undefined;
     }
     const handleKeyDown = (event) => {
@@ -117,7 +141,7 @@ export default function AlbumDrawer({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPhotoOpen, deleteConfirmPhoto, showCancelConfirm, lightboxIndex, isDirty]);
+  }, [addPhotoStatus, saveStatus, deleteConfirmPhoto, showCancelConfirm, lightboxIndex, isDirty]);
 
   const category = getCategory(album.category);
 
@@ -140,24 +164,24 @@ export default function AlbumDrawer({
       ) : (
         <>
           <p className="admin-list-hint">
-            Drag a photo to reorder it — the first photo is the album&rsquo;s cover.
+            The first photo is the album&rsquo;s cover — click the frame icon on
+            another photo to make it the cover instead.
           </p>
           <ul className="admin-drawer-photo-list">
             {draftPhotos.map((photo, index) => (
-              <li
-                key={photo.id}
-                className={`admin-photo-card ${
-                  draggedId === photo.id ? "dragging" : ""
-                } ${dragOverId === photo.id ? "drag-over" : ""}`}
-                draggable
-                onDragStart={(event) => handleDragStart(event, photo.id)}
-                onDragOver={(event) => handleDragOver(event, photo.id)}
-                onDragLeave={() => handleDragLeave(photo.id)}
-                onDrop={(event) => handleDrop(event, photo.id)}
-                onDragEnd={handleDragEnd}
-              >
-                <span className="admin-drag-handle" aria-label="Drag to reorder">
-                  <IconDragHandle />
+              <li key={photo.id} className="admin-photo-card">
+                <span className="admin-make-cover-slot">
+                  {index !== 0 && (
+                    <button
+                      type="button"
+                      className="admin-make-cover-btn"
+                      onClick={() => handleMakeCover(photo.id)}
+                      aria-label={`Make ${photo.title} the album cover`}
+                      title="Make album cover"
+                    >
+                      <IconFrame />
+                    </button>
+                  )}
                 </span>
                 <div className="admin-photo-thumb-wrap">
                   {index === 0 && (
@@ -185,10 +209,12 @@ export default function AlbumDrawer({
                 <div className="admin-photo-actions">
                   <button
                     type="button"
-                    className="btn btn-outline admin-delete-btn"
+                    className="admin-delete-btn"
                     onClick={() => setDeleteConfirmPhoto(photo)}
+                    aria-label={`Delete ${photo.title}`}
+                    title="Delete photo"
                   >
-                    Delete
+                    <IconTrash />
                   </button>
                 </div>
               </li>
@@ -197,26 +223,49 @@ export default function AlbumDrawer({
         </>
       )}
 
-      <button
-        type="button"
-        className="btn btn-outline admin-drawer-add-btn"
-        onClick={() => setAddPhotoOpen(true)}
+      <label
+        className={`admin-add-photo-slot ${
+          addPhotoStatus === "uploading" ? "is-uploading" : ""
+        }`}
       >
-        Add Photo
-      </button>
+        <input
+          type="file"
+          className="admin-add-photo-input"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleAddPhotoFile}
+          disabled={addPhotoStatus === "uploading"}
+        />
+        <span className="admin-add-photo-icon" aria-hidden="true" />
+        {addPhotoStatus === "uploading" ? "Uploading…" : "Add Photo"}
+      </label>
+      {addPhotoStatus === "error" && (
+        <p className="admin-file-error">{addPhotoError}</p>
+      )}
+
+      {saveStatus === "error" && (
+        <p className="form-banner form-banner-error" role="alert">
+          {saveError}
+        </p>
+      )}
 
       <div className="admin-drawer-save-row">
-        <button type="button" className="btn btn-outline" onClick={handleCancelRequest}>
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={handleCancelRequest}
+          disabled={saveStatus === "saving"}
+        >
           Cancel
         </button>
-        <button type="button" className="btn btn-primary" onClick={handleSave}>
-          Save
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={saveStatus === "saving"}
+        >
+          {saveStatus === "saving" ? "Uploading…" : "Upload Changes"}
         </button>
       </div>
-      <p className="admin-drawer-save-note">
-        <em>Saving stages this album — it won&rsquo;t go live until you click
-        &ldquo;Publish Changes&rdquo; on the main screen.</em>
-      </p>
 
       <div className="admin-drawer-delete-album-row">
         <button
@@ -227,18 +276,6 @@ export default function AlbumDrawer({
           Delete Album
         </button>
       </div>
-
-      {addPhotoOpen && (
-        <AddPhotoModal
-          album={album}
-          token={token}
-          onClose={() => setAddPhotoOpen(false)}
-          onAdded={(item) => {
-            setDraftPhotos((prev) => [...prev, item]);
-            setAddPhotoOpen(false);
-          }}
-        />
-      )}
 
       {deleteConfirmPhoto && (
         <ConfirmDialog

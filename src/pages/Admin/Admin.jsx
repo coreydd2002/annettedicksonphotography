@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
-import { IconEdit, IconEye, IconEyeOff } from "../../components/icons";
+import { IconEdit, IconEye, IconEyeOff, IconMallet } from "../../components/icons";
 import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage";
 import Lightbox from "../../components/Lightbox/Lightbox";
 import ConfirmDialog from "./ConfirmDialog";
@@ -73,8 +73,6 @@ export default function Admin() {
   const [items, setItems] = useState([]);
   const [albums, setAlbums] = useState([]);
   const [listStatus, setListStatus] = useState("idle");
-  const savedItemsRef = useRef([]);
-  const savedAlbumsRef = useRef([]);
 
   const [expandedAlbumIds, setExpandedAlbumIds] = useState(() => new Set());
 
@@ -83,10 +81,9 @@ export default function Admin() {
   const [workshop, setWorkshop] = useState(null); // null | { type: "add" } | { type: "edit", albumId }
   const [workshopIsDirty, setWorkshopIsDirty] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [confirmPending, setConfirmPending] = useState(false);
   const [lightbox, setLightbox] = useState(null); // null | { photos, index }
-
-  const [publishStatus, setPublishStatus] = useState("idle"); // idle | saving | done | error
-  const [publishError, setPublishError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const authFetch = useCallback(
     async (path, options = {}) => {
@@ -112,12 +109,8 @@ export default function Admin() {
       const response = await authFetch("/api/admin/list");
       if (!response.ok) throw new Error("Failed to load gallery list");
       const data = await response.json();
-      const loadedItems = data.items || [];
-      const loadedAlbums = data.albums || [];
-      setItems(loadedItems);
-      savedItemsRef.current = loadedItems;
-      setAlbums(loadedAlbums);
-      savedAlbumsRef.current = loadedAlbums;
+      setItems(data.items || []);
+      setAlbums(data.albums || []);
       setListStatus("idle");
     } catch {
       setListStatus("error");
@@ -209,10 +202,54 @@ export default function Admin() {
     }
   };
 
-  const handleAlbumCreated = ({ album, items: newItems }) => {
-    if (album) setAlbums((prev) => [...prev, album]);
-    if (newItems?.length) setItems((prev) => [...prev, ...newItems]);
-  };
+  // The single point where a staged change actually reaches the database —
+  // every save action (a new album, an edited album, a delete) funnels
+  // through this with the full next items/albums arrays, matching
+  // publishChanges()'s full-replace semantics on the server. Throws on
+  // failure so callers can show their own inline error and keep whatever
+  // the user was editing intact; only updates local state (from the
+  // server's response) on success, so `items`/`albums` always reflect
+  // what's actually live.
+  const publishToServer = useCallback(
+    async (nextItems, nextAlbums) => {
+      const response = await authFetch("/api/admin/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: nextItems, albums: nextAlbums }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Could not upload changes — please try again.");
+      }
+      setItems(data.items);
+      setAlbums(data.albums);
+    },
+    [authFetch],
+  );
+
+  // Called by AddAlbumPanel once per "Upload Changes" click, with whatever
+  // photos it successfully uploaded to Blob storage this click (possibly a
+  // retry continuing an album a prior click already created).
+  const saveNewAlbum = useCallback(
+    (album, newAlbumPhotos, albumIsNew) => {
+      const nextAlbums = albumIsNew ? [...albums, album] : albums;
+      const nextItems = [...items, ...newAlbumPhotos];
+      return publishToServer(nextItems, nextAlbums);
+    },
+    [albums, items, publishToServer],
+  );
+
+  // Called by AlbumDrawer's "Upload Changes" click with its full draft —
+  // title and photos (rename, add, delete, and reorder are all just a
+  // different draftPhotos array by the time it gets here).
+  const saveAlbumEdits = useCallback(
+    (albumId, { title, photos }) => {
+      const nextAlbums = albums.map((a) => (a.id === albumId ? { ...a, title } : a));
+      const nextItems = applyAlbumPhotos(items, albumId, photos);
+      return publishToServer(nextItems, nextAlbums);
+    },
+    [albums, items, publishToServer],
+  );
 
   const requestDeleteAlbum = (album) => {
     const photoCount = items.filter((item) => item.albumId === album.id).length;
@@ -220,81 +257,27 @@ export default function Admin() {
       title: "Delete album?",
       message: `Delete "${album.title}" and ${photoCount} ${
         photoCount === 1 ? "photo" : "photos"
-      } in it? This won't take effect until you Publish Changes.`,
+      } in it?`,
       confirmLabel: "Delete Album",
-      onConfirm: () => {
-        setAlbums((prev) => prev.filter((a) => a.id !== album.id));
-        setItems((prev) => prev.filter((item) => item.albumId !== album.id));
-        closeWorkshop();
-        closeConfirm();
+      pendingLabel: "Deleting…",
+      onConfirm: async () => {
+        setActionError("");
+        setConfirmPending(true);
+        try {
+          const nextAlbums = albums.filter((a) => a.id !== album.id);
+          const nextItems = items.filter((item) => item.albumId !== album.id);
+          await publishToServer(nextItems, nextAlbums);
+          closeWorkshop();
+          closeConfirm();
+        } catch (err) {
+          setActionError(err.message || "Could not delete the album — please try again.");
+          closeConfirm();
+        } finally {
+          setConfirmPending(false);
+        }
       },
     });
   };
-
-  const hasPendingChanges =
-    JSON.stringify(items) !== JSON.stringify(savedItemsRef.current) ||
-    JSON.stringify(albums) !== JSON.stringify(savedAlbumsRef.current);
-
-  const handleDiscardAll = () => {
-    setItems(savedItemsRef.current);
-    setAlbums(savedAlbumsRef.current);
-    closeWorkshop();
-    setPublishStatus("idle");
-    setPublishError("");
-  };
-
-  const requestDiscardAll = () => {
-    requestConfirm({
-      title: "Discard all changes?",
-      message:
-        "This will undo every add, edit, and delete you've made since the last publish.",
-      confirmLabel: "Discard Changes",
-      onConfirm: () => {
-        handleDiscardAll();
-        closeConfirm();
-      },
-    });
-  };
-
-  const handlePublish = async () => {
-    setPublishStatus("saving");
-    setPublishError("");
-
-    try {
-      const response = await authFetch("/api/admin/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, albums }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setPublishStatus("error");
-        setPublishError(data.error || "Could not publish changes — please try again.");
-        return;
-      }
-
-      // Publishing is now an instant database write with nothing to
-      // rebuild — update the "last published" snapshot directly from the
-      // response so hasPendingChanges clears right away, no reload needed.
-      setItems(data.items);
-      setAlbums(data.albums);
-      savedItemsRef.current = data.items;
-      savedAlbumsRef.current = data.albums;
-      setPublishStatus("done");
-    } catch {
-      setPublishStatus("error");
-      setPublishError("Could not publish changes — please try again.");
-    }
-  };
-
-  // "done" is a transient confirmation, not a screen — clear it after a
-  // few seconds so the banner doesn't linger.
-  useEffect(() => {
-    if (publishStatus !== "done") return undefined;
-    const timeout = setTimeout(() => setPublishStatus("idle"), 4000);
-    return () => clearTimeout(timeout);
-  }, [publishStatus]);
 
   if (!isAuthenticated) {
     return (
@@ -369,26 +352,6 @@ export default function Admin() {
           </div>
 
           <div className="admin-header-actions">
-            {hasPendingChanges && (
-              <button
-                type="button"
-                className="admin-discard-link"
-                onClick={requestDiscardAll}
-                disabled={publishStatus === "saving"}
-              >
-                Discard changes
-              </button>
-            )}
-            <button
-              type="button"
-              className={`btn btn-primary admin-publish-btn ${
-                hasPendingChanges ? "" : "is-faded"
-              }`}
-              onClick={handlePublish}
-              disabled={!hasPendingChanges || publishStatus === "saving"}
-            >
-              {publishStatus === "saving" ? "Publishing…" : "Publish Changes"}
-            </button>
             <button
               type="button"
               className="btn btn-outline"
@@ -402,14 +365,9 @@ export default function Admin() {
           </div>
         </div>
 
-        {publishStatus === "error" && (
+        {actionError && (
           <p className="form-banner form-banner-error" role="alert">
-            {publishError}
-          </p>
-        )}
-        {publishStatus === "done" && (
-          <p className="form-banner form-banner-success" role="status">
-            Changes published.
+            {actionError}
           </p>
         )}
 
@@ -523,7 +481,7 @@ export default function Admin() {
                 token={session?.token}
                 onClose={closeWorkshop}
                 onDirtyChange={setWorkshopIsDirty}
-                onAlbumCreated={handleAlbumCreated}
+                onSaveNewAlbum={saveNewAlbum}
               />
             )}
 
@@ -535,21 +493,15 @@ export default function Admin() {
                 token={session?.token}
                 onClose={closeWorkshop}
                 onDirtyChange={setWorkshopIsDirty}
-                onRenameAlbum={(newTitle) =>
-                  setAlbums((prev) =>
-                    prev.map((a) => (a.id === editingAlbum.id ? { ...a, title: newTitle } : a)),
-                  )
-                }
                 onDeleteAlbumRequest={() => requestDeleteAlbum(editingAlbum)}
-                onSavePhotos={(newAlbumPhotos) =>
-                  setItems((prev) => applyAlbumPhotos(prev, editingAlbum.id, newAlbumPhotos))
-                }
+                onSave={(payload) => saveAlbumEdits(editingAlbum.id, payload)}
               />
             )}
 
             {!workshop && (
               <div className="admin-workshop-empty">
                 <span className="eyebrow">Workshop</span>
+                <IconMallet className="admin-workshop-empty-icon" aria-hidden="true" />
                 <p>
                   Select an album to edit, or click &ldquo;Add New Album&rdquo; above
                   to create one.
@@ -560,7 +512,9 @@ export default function Admin() {
         </div>
       </div>
 
-      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} />}
+      {confirmDialog && (
+        <ConfirmDialog {...confirmDialog} pending={confirmPending} onCancel={closeConfirm} />
+      )}
 
       {lightbox && (
         <Lightbox

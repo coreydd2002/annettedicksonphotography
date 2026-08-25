@@ -83,30 +83,19 @@
 }
 
 .album-tile-caption {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   margin-top: 14px;
   text-align: center;
 }
 
 .album-tile-title {
+  display: block;
   font-family: var(--font-heading);
   font-size: 1.6rem;
-  font-weight: 700;
   color: var(--color-ink);
   transition: color 0.2s ease;
 }
 
 .album-tile:hover .album-tile-title,
 .album-tile:focus-visible .album-tile-title {
-  color: var(--theme-accent-dark, var(--color-lavender-dark));
-}
-
-.album-tile-meta {
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: var(--theme-accent-dark, var(--color-lavender-dark));
 }
