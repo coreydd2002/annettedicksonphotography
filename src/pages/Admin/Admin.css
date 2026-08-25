@@ -55,10 +55,12 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  /* This is a working tool, not a reading page — drop the site's public
-     --container-width cap (and its centering gutters) so the Albums list
-     and workshop panel can use the full browser width. */
-  max-width: none;
+  /* This is a working tool, not a reading page, so it uses far more than
+     the site's public --container-width — but a cap this generous only
+     ever matters on very wide monitors, keeping a little breathing room
+     there while still filling narrower windows edge to edge (minus the
+     small side padding inherited from .container). */
+  max-width: 1800px;
 }
 
 .admin-header-row {
