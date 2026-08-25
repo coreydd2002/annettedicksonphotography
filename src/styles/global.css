@@ -16,6 +16,30 @@
   --color-lavender-pale: #f1ecf8;
   --color-border: #e5e0e6;
 
+  /* Per-category album theme colors — one accent per shoot type, applied via
+     the [data-theme] selectors below. Muted/desaturated to match the site's
+     existing lavender-on-paper palette. */
+  --color-wedding: #c8a961;
+  --color-wedding-dark: #a3823f;
+  --color-wedding-pale: #f6eed8;
+
+  --color-portrait: #c17b5a;
+  --color-portrait-dark: #9c5c40;
+  --color-portrait-pale: #f3e2d6;
+
+  /* Product keeps the site's original lavender accent unchanged. */
+  --color-product: var(--color-lavender);
+  --color-product-dark: var(--color-lavender-dark);
+  --color-product-pale: var(--color-lavender-pale);
+
+  --color-family: #cf8fa0;
+  --color-family-dark: #a96c7d;
+  --color-family-pale: #f6e3e8;
+
+  --color-engagement: #92a382;
+  --color-engagement-dark: #70805f;
+  --color-engagement-pale: #e8ecdf;
+
   --font-script: "Allura", cursive;
   --font-heading: "Cormorant Garamond", Georgia, serif;
   --font-body: "Jost", "Helvetica Neue", Arial, sans-serif;
@@ -24,6 +48,34 @@
   --header-height-mobile: 64px;
 
   --container-width: 1180px;
+}
+
+/* Elements carrying data-theme="<category-key>" (album pages, album/category
+   cards) get a themed accent that falls back to lavender everywhere else. */
+[data-theme="wedding"] {
+  --theme-accent: var(--color-wedding);
+  --theme-accent-dark: var(--color-wedding-dark);
+  --theme-accent-pale: var(--color-wedding-pale);
+}
+[data-theme="portrait"] {
+  --theme-accent: var(--color-portrait);
+  --theme-accent-dark: var(--color-portrait-dark);
+  --theme-accent-pale: var(--color-portrait-pale);
+}
+[data-theme="product"] {
+  --theme-accent: var(--color-product);
+  --theme-accent-dark: var(--color-product-dark);
+  --theme-accent-pale: var(--color-product-pale);
+}
+[data-theme="family"] {
+  --theme-accent: var(--color-family);
+  --theme-accent-dark: var(--color-family-dark);
+  --theme-accent-pale: var(--color-family-pale);
+}
+[data-theme="engagement"] {
+  --theme-accent: var(--color-engagement);
+  --theme-accent-dark: var(--color-engagement-dark);
+  --theme-accent-pale: var(--color-engagement-pale);
 }
 
 *,

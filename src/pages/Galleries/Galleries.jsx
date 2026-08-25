@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import GalleryGrid from "../../components/GalleryGrid/GalleryGrid";
-import Lightbox from "../../components/Lightbox/Lightbox";
+import AlbumGrid from "../../components/AlbumGrid/AlbumGrid";
+import albums from "../../../content/albums.json";
 import galleryItems from "../../../content/gallery.json";
+import { CATEGORIES } from "../../../shared/categories";
 import "./Galleries.css";
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "wedding", label: "Wedding" },
-  { key: "portrait", label: "Portrait" },
-  { key: "product", label: "Product" },
-];
+const FILTERS = [{ key: "all", label: "All" }, ...CATEGORIES];
 
 function resolveFilter(value) {
   return FILTERS.some((filter) => filter.key === value) ? value : "all";
@@ -21,30 +17,27 @@ export default function Galleries() {
   const [activeFilter, setActiveFilter] = useState(() =>
     resolveFilter(searchParams.get("category")),
   );
-  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
     setActiveFilter(resolveFilter(searchParams.get("category")));
   }, [searchParams]);
 
-  const filteredItems = useMemo(() => {
+  const enrichedAlbums = useMemo(() => {
+    return albums.map((album) => {
+      const photos = galleryItems.filter((item) => item.albumId === album.id);
+      return { ...album, coverPhoto: photos[0], photoCount: photos.length };
+    });
+  }, []);
+
+  const filteredAlbums = useMemo(() => {
     return activeFilter === "all"
-      ? galleryItems
-      : galleryItems.filter((item) => item.category === activeFilter);
-  }, [activeFilter]);
+      ? enrichedAlbums
+      : enrichedAlbums.filter((album) => album.category === activeFilter);
+  }, [activeFilter, enrichedAlbums]);
 
   const handleFilterChange = (key) => {
-    setLightboxIndex(null);
     setSearchParams(key === "all" ? {} : { category: key });
   };
-
-  const closeLightbox = () => setLightboxIndex(null);
-  const prevLightbox = () =>
-    setLightboxIndex(
-      (index) => (index - 1 + filteredItems.length) % filteredItems.length,
-    );
-  const nextLightbox = () =>
-    setLightboxIndex((index) => (index + 1) % filteredItems.length);
 
   return (
     <>
@@ -53,8 +46,9 @@ export default function Galleries() {
           <span className="eyebrow">Portfolio</span>
           <h1>Galleries</h1>
           <p className="galleries-intro">
-            A collection of weddings, portraits, and product work — each
-            shaped around real moments and honest light.
+            A collection of weddings, portraits, family sessions,
+            engagements, and product work — each shaped around real moments
+            and honest light.
           </p>
 
           <div
@@ -82,19 +76,9 @@ export default function Galleries() {
 
       <section className="section galleries-grid-section">
         <div className="container">
-          <GalleryGrid items={filteredItems} onItemClick={setLightboxIndex} />
+          <AlbumGrid albums={filteredAlbums} />
         </div>
       </section>
-
-      {lightboxIndex !== null && (
-        <Lightbox
-          items={filteredItems}
-          currentIndex={lightboxIndex}
-          onClose={closeLightbox}
-          onPrev={prevLightbox}
-          onNext={nextLightbox}
-        />
-      )}
     </>
   );
 }

@@ -7,7 +7,8 @@ const COMMITTER = {
   email: "admin@annettedickson.photography",
 };
 
-export const MANIFEST_PATH = "content/gallery.json";
+export const GALLERY_MANIFEST_PATH = "content/gallery.json";
+export const ALBUMS_MANIFEST_PATH = "content/albums.json";
 
 function config() {
   const owner = process.env.GITHUB_OWNER;
@@ -104,10 +105,10 @@ export async function deleteFile({ path, sha, message }) {
   }
 }
 
-export async function getManifest() {
-  const file = await getFile(MANIFEST_PATH);
+export async function getManifest(path) {
+  const file = await getFile(path);
   if (!file) {
-    throw new Error(`Manifest not found at ${MANIFEST_PATH}`);
+    throw new Error(`Manifest not found at ${path}`);
   }
   const items = JSON.parse(
     Buffer.from(file.contentBase64, "base64").toString("utf8"),
@@ -115,9 +116,9 @@ export async function getManifest() {
   return { items, sha: file.sha };
 }
 
-export async function putManifest(items, sha, message) {
+export async function putManifest(items, sha, message, path) {
   const contentBase64 = Buffer.from(JSON.stringify(items, null, 2)).toString(
     "base64",
   );
-  return putFile({ path: MANIFEST_PATH, contentBase64, message, sha });
+  return putFile({ path, contentBase64, message, sha });
 }

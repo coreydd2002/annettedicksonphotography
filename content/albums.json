@@ -1,0 +1,7 @@
+[
+  { "id": "golden-hour-wedding", "title": "Golden Hour Wedding", "category": "wedding" },
+  { "id": "editorial-portraits", "title": "Editorial Portraits", "category": "portrait" },
+  { "id": "studio-collection", "title": "Studio Collection", "category": "product" },
+  { "id": "family-sessions", "title": "Family Sessions", "category": "family" },
+  { "id": "engagement-stories", "title": "Engagement Stories", "category": "engagement" }
+]

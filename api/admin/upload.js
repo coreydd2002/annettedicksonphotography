@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { checkAuthHeader } from "../_lib/auth.js";
 import { putFile } from "../_lib/github.js";
+import { CATEGORY_KEYS } from "../../shared/categories.js";
 
-const CATEGORIES = new Set(["wedding", "portrait", "product"]);
 const MIME_EXTENSIONS = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -26,13 +26,19 @@ function slugify(value) {
   return slug || "photo";
 }
 
-// This only commits the image file — it does NOT touch content/gallery.json.
-// The admin page stages new photos locally (so they show up in "Current
-// Photos" immediately) and only writes the manifest when "Save and Redeploy"
-// is clicked (see publish.js). That keeps each upload request small (well
-// under Vercel's body-size limit even if several photos are added in one
-// sitting) and means the public site's content doesn't actually change until
-// the admin explicitly publishes.
+// This only commits the image file — it does NOT touch content/gallery.json
+// or content/albums.json. The admin page stages new photos (and any new
+// album) locally, and only writes the manifests when "Save and Redeploy" is
+// clicked (see publish.js). That keeps each upload request small and means
+// the public site's content doesn't actually change until the admin
+// explicitly publishes.
+//
+// Every photo belongs to an album — either an existing one (albumId +
+// category, both supplied by the client, which already has the staged
+// album list in memory) or a brand new one (newAlbum: { title, category },
+// created here). This endpoint does not fetch the live albums manifest to
+// verify an existing albumId is real; publish.js is the authoritative,
+// referentially-checked gate before anything goes live.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -43,18 +49,41 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const { title, category, aspect, imageDataUrl } = req.body || {};
+  const { title, aspect, imageDataUrl, albumId, category: submittedCategory, newAlbum } =
+    req.body || {};
 
   if (typeof title !== "string" || !title.trim()) {
     return res.status(400).json({ error: "Title is required" });
   }
-  if (!CATEGORIES.has(category)) {
-    return res
-      .status(400)
-      .json({ error: "Category must be wedding, portrait, or product" });
-  }
   if (typeof aspect !== "string" || !ASPECT_PATTERN.test(aspect)) {
     return res.status(400).json({ error: "Invalid aspect ratio" });
+  }
+
+  let resolvedAlbumId;
+  let category;
+  let newAlbumResult;
+
+  if (newAlbum && typeof newAlbum === "object") {
+    const albumTitle =
+      typeof newAlbum.title === "string" ? newAlbum.title.trim() : "";
+    if (!albumTitle) {
+      return res.status(400).json({ error: "Album title is required" });
+    }
+    if (!CATEGORY_KEYS.has(newAlbum.category)) {
+      return res.status(400).json({ error: "Invalid album category" });
+    }
+    resolvedAlbumId = `${slugify(albumTitle)}-${randomUUID().slice(0, 8)}`;
+    category = newAlbum.category;
+    newAlbumResult = { id: resolvedAlbumId, title: albumTitle, category };
+  } else {
+    if (typeof albumId !== "string" || !albumId.trim()) {
+      return res.status(400).json({ error: "An album is required" });
+    }
+    if (!CATEGORY_KEYS.has(submittedCategory)) {
+      return res.status(400).json({ error: "Invalid category" });
+    }
+    resolvedAlbumId = albumId;
+    category = submittedCategory;
   }
 
   const match =
@@ -80,8 +109,8 @@ export default async function handler(req, res) {
 
   const trimmedTitle = title.trim();
   const id = `${slugify(trimmedTitle)}-${randomUUID().slice(0, 8)}`;
-  const imagePath = `public/gallery/${category}/${id}.${ext}`;
-  const src = `/gallery/${category}/${id}.${ext}`;
+  const imagePath = `public/albums/${resolvedAlbumId}/${id}.${ext}`;
+  const src = `/albums/${resolvedAlbumId}/${id}.${ext}`;
 
   try {
     await putFile({
@@ -94,5 +123,15 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "Failed to upload the image to GitHub" });
   }
 
-  return res.status(201).json({ item: { id, category, title: trimmedTitle, aspect, src } });
+  return res.status(201).json({
+    item: {
+      id,
+      albumId: resolvedAlbumId,
+      category,
+      title: trimmedTitle,
+      aspect,
+      src,
+    },
+    album: newAlbumResult,
+  });
 }

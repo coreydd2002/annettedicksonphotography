@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { CornerFlourish } from "../../components/decorations";
+import { CATEGORIES } from "../../../shared/categories";
 import "./BookNow.css";
 
-const SESSION_TYPES = ["Portrait", "Wedding", "Product"];
+const SESSION_TYPES = CATEGORIES.map((category) => category.label);
 const CONTACT_METHODS = ["Text", "Call", "Email"];
 const CONTACT_VERBS = { Text: "text", Call: "call", Email: "email" };
 

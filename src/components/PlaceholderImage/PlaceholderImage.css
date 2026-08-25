@@ -35,18 +35,22 @@ div.placeholder-image {
   opacity: 0.85;
 }
 
+/* Each variant is themed to match its corresponding category's accent color
+   (see shared/categories.js's variant field and global.css's --color-*
+   tokens), so an album with no real photos yet still previews in its
+   correct theme color. */
 .placeholder-image-variant-0 {
-  background: linear-gradient(150deg, #2a2730, #1a1a1a 60%, #493d59);
+  background: linear-gradient(150deg, var(--color-wedding), #1a1a1a 70%);
 }
 .placeholder-image-variant-1 {
-  background: linear-gradient(150deg, #8c74ac, #1a1a1a 75%);
+  background: linear-gradient(150deg, var(--color-portrait), #1a1a1a 70%);
 }
 .placeholder-image-variant-2 {
-  background: linear-gradient(150deg, #4b4552, #726c77 50%, #1a1a1a);
+  background: linear-gradient(150deg, var(--color-product), #1a1a1a 70%);
 }
 .placeholder-image-variant-3 {
-  background: linear-gradient(150deg, #1a1a1a, #8c74ac 80%, #1a1a1a);
+  background: linear-gradient(150deg, var(--color-family), #1a1a1a 70%);
 }
 .placeholder-image-variant-4 {
-  background: linear-gradient(150deg, #726c77, #493d59 55%, #1a1a1a);
+  background: linear-gradient(150deg, var(--color-engagement), #1a1a1a 70%);
 }

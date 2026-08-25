@@ -8,15 +8,11 @@ import {
   MAX_IMAGE_BYTES,
   REDEPLOY_REDIRECT_KEY,
 } from "./utils";
+import { CATEGORIES, getCategory } from "../../../shared/categories";
 import "./Admin.css";
 
 const SESSION_KEY = "adp_admin_token";
-
-const CATEGORIES = [
-  { key: "wedding", label: "Wedding" },
-  { key: "portrait", label: "Portrait" },
-  { key: "product", label: "Product" },
-];
+const NEW_ALBUM_VALUE = "__new__";
 
 const FILTERS = [{ key: "all", label: "All" }, ...CATEGORIES];
 
@@ -82,9 +78,11 @@ export default function Admin() {
   const [loginError, setLoginError] = useState("");
 
   const [items, setItems] = useState([]);
+  const [albums, setAlbums] = useState([]);
   const [listStatus, setListStatus] = useState("idle");
   const [activeFilter, setActiveFilter] = useState("all");
   const savedItemsRef = useRef([]);
+  const savedAlbumsRef = useRef([]);
 
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
@@ -93,7 +91,9 @@ export default function Admin() {
   const [publishError, setPublishError] = useState("");
 
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("wedding");
+  const [albumChoice, setAlbumChoice] = useState(NEW_ALBUM_VALUE);
+  const [newAlbumTitle, setNewAlbumTitle] = useState("");
+  const [newAlbumCategory, setNewAlbumCategory] = useState(CATEGORIES[0].key);
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [detectedAspect, setDetectedAspect] = useState("");
@@ -126,9 +126,12 @@ export default function Admin() {
       const response = await authFetch("/api/admin/list");
       if (!response.ok) throw new Error("Failed to load gallery list");
       const data = await response.json();
-      const loaded = data.items || [];
-      setItems(loaded);
-      savedItemsRef.current = loaded;
+      const loadedItems = data.items || [];
+      const loadedAlbums = data.albums || [];
+      setItems(loadedItems);
+      savedItemsRef.current = loadedItems;
+      setAlbums(loadedAlbums);
+      savedAlbumsRef.current = loadedAlbums;
       setListStatus("idle");
     } catch {
       setListStatus("error");
@@ -213,7 +216,6 @@ export default function Admin() {
 
   const resetUploadForm = () => {
     setTitle("");
-    setCategory("wedding");
     setFile(null);
     setDetectedAspect("");
     setFileError("");
@@ -224,13 +226,22 @@ export default function Admin() {
 
   // Commits the image file right away (so it exists, small request, one at a
   // time) and adds it to the local staged list. The public site doesn't
-  // change until "Save and Redeploy" writes the manifest.
+  // change until "Save and Redeploy" writes the manifests. Every photo must
+  // belong to an album — either one already staged (albumChoice holds its
+  // id) or a brand new one created inline (NEW_ALBUM_VALUE).
   const handleUpload = async (event) => {
     event.preventDefault();
+
+    const isNewAlbum = albumChoice === NEW_ALBUM_VALUE;
 
     if (!title.trim() || !file || !detectedAspect) {
       setUploadStatus("error");
       setUploadError("Please add a title and choose a photo before saving.");
+      return;
+    }
+    if (isNewAlbum && !newAlbumTitle.trim()) {
+      setUploadStatus("error");
+      setUploadError("Please name the new album before saving.");
       return;
     }
 
@@ -239,15 +250,29 @@ export default function Admin() {
 
     try {
       const imageDataUrl = await fileToDataUrl(file);
+      const selectedAlbum = albums.find((album) => album.id === albumChoice);
+      const body = isNewAlbum
+        ? {
+            title: title.trim(),
+            aspect: detectedAspect,
+            imageDataUrl,
+            newAlbum: {
+              title: newAlbumTitle.trim(),
+              category: newAlbumCategory,
+            },
+          }
+        : {
+            title: title.trim(),
+            aspect: detectedAspect,
+            imageDataUrl,
+            albumId: albumChoice,
+            category: selectedAlbum?.category,
+          };
+
       const response = await authFetch("/api/admin/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          category,
-          aspect: detectedAspect,
-          imageDataUrl,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
 
@@ -258,6 +283,11 @@ export default function Admin() {
       }
 
       setItems((prev) => [...prev, data.item]);
+      if (data.album) {
+        setAlbums((prev) => [...prev, data.album]);
+        setAlbumChoice(data.album.id);
+        setNewAlbumTitle("");
+      }
       setUploadStatus("success");
       resetUploadForm();
     } catch {
@@ -285,7 +315,9 @@ export default function Admin() {
 
   const hasPendingChanges =
     items.map((item) => String(item.id)).join("|") !==
-    savedItemsRef.current.map((item) => String(item.id)).join("|");
+      savedItemsRef.current.map((item) => String(item.id)).join("|") ||
+    albums.map((album) => String(album.id)).join("|") !==
+      savedAlbumsRef.current.map((album) => String(album.id)).join("|");
 
   const handleDragStart = (event, id) => {
     setDraggedId(id);
@@ -331,6 +363,7 @@ export default function Admin() {
 
   const handleDiscardAll = () => {
     setItems(savedItemsRef.current);
+    setAlbums(savedAlbumsRef.current);
     setPublishStatus("idle");
     setPublishError("");
   };
@@ -343,7 +376,7 @@ export default function Admin() {
       const response = await authFetch("/api/admin/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, albums }),
       });
       const data = await response.json();
 
@@ -478,19 +511,50 @@ export default function Admin() {
                 </div>
 
                 <div className="form-row">
-                  <label htmlFor="admin-category">Category</label>
+                  <label htmlFor="admin-album">Album</label>
                   <select
-                    id="admin-category"
-                    value={category}
-                    onChange={(event) => setCategory(event.target.value)}
+                    id="admin-album"
+                    value={albumChoice}
+                    onChange={(event) => setAlbumChoice(event.target.value)}
                   >
-                    {CATEGORIES.map((option) => (
-                      <option key={option.key} value={option.key}>
-                        {option.label}
+                    <option value={NEW_ALBUM_VALUE}>+ Create New Album</option>
+                    {albums.map((album) => (
+                      <option key={album.id} value={album.id}>
+                        {album.title} ({getCategory(album.category)?.label || album.category})
                       </option>
                     ))}
                   </select>
                 </div>
+
+                {albumChoice === NEW_ALBUM_VALUE && (
+                  <>
+                    <div className="form-row">
+                      <label htmlFor="admin-new-album-title">New Album Title</label>
+                      <input
+                        id="admin-new-album-title"
+                        type="text"
+                        value={newAlbumTitle}
+                        onChange={(event) => setNewAlbumTitle(event.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-row">
+                      <label htmlFor="admin-new-album-category">Album Category</label>
+                      <select
+                        id="admin-new-album-category"
+                        value={newAlbumCategory}
+                        onChange={(event) => setNewAlbumCategory(event.target.value)}
+                      >
+                        {CATEGORIES.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
 
                 <div className="form-row">
                   <label htmlFor="admin-file">Photo</label>
@@ -523,7 +587,10 @@ export default function Admin() {
                   type="submit"
                   className="btn btn-primary"
                   disabled={
-                    uploadStatus === "submitting" || !file || Boolean(fileError)
+                    uploadStatus === "submitting" ||
+                    !file ||
+                    Boolean(fileError) ||
+                    (albumChoice === NEW_ALBUM_VALUE && !newAlbumTitle.trim())
                   }
                 >
                   {uploadStatus === "submitting" ? "Adding…" : "Add Photo"}
@@ -632,7 +699,8 @@ export default function Admin() {
                       <div className="admin-photo-meta">
                         <span className="admin-photo-title">{item.title}</span>
                         <span className="admin-photo-category">
-                          {item.category}
+                          {albums.find((album) => album.id === item.albumId)
+                            ?.title || item.category}
                         </span>
                       </div>
                       <button

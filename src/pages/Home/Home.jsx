@@ -5,23 +5,18 @@ import { FloralDivider } from "../../components/decorations";
 import { IconInstagram } from "../../components/icons";
 import slides from "../../data/slides";
 import { SITE } from "../../config";
+import { CATEGORIES } from "../../../shared/categories";
 import "./Home.css";
 
-const CATEGORIES = [
-  { slug: "wedding", label: "Wedding", variant: 1, src: "/rings.webp" },
-  {
-    slug: "portrait",
-    label: "Portrait",
-    variant: 2,
-    src: "/2022.05.26_sarah-wallace-360.webp",
-  },
-  {
-    slug: "product",
-    label: "Product",
-    variant: 3,
-    src: "/reset-your-nest-web-size-straightened-2-2.webp",
-  },
-];
+// Home-page-local hero photo per category — kept here rather than on the
+// shared registry since api/*.js has no use for a homepage image path.
+// Family and Engagement have no source photo yet, so their tiles fall back
+// to PlaceholderImage's themed gradient, same as every gallery seed item.
+const HOME_IMAGES = {
+  wedding: "/rings.webp",
+  portrait: "/2022.05.26_sarah-wallace-360.webp",
+  product: "/reset-your-nest-web-size-straightened-2-2.webp",
+};
 
 export default function Home() {
   return (
@@ -73,28 +68,31 @@ export default function Home() {
       <section className="section categories-section">
         <div className="container">
           <div className="categories-grid">
-            {CATEGORIES.map((category) => (
-              <Link
-                key={category.slug}
-                to={`/galleries?category=${category.slug}`}
-                className="category-card"
-              >
-                <div className="category-card-frame">
-                  <div className="category-card-photo">
-                    <PlaceholderImage
-                      src={category.src}
-                      alt={category.src ? category.label : ""}
-                      aspect="4 / 5"
-                      variant={category.variant}
-                      className="category-card-image"
-                    />
-                    <span className="category-card-label">
-                      {category.label}
-                    </span>
+            {CATEGORIES.map((category) => {
+              const src = HOME_IMAGES[category.key];
+              return (
+                <Link
+                  key={category.key}
+                  to={`/galleries?category=${category.key}`}
+                  className="category-card"
+                >
+                  <div className="category-card-frame">
+                    <div className="category-card-photo">
+                      <PlaceholderImage
+                        src={src}
+                        alt={src ? category.label : ""}
+                        aspect="4 / 5"
+                        variant={category.variant}
+                        className="category-card-image"
+                      />
+                      <span className="category-card-label">
+                        {category.label}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

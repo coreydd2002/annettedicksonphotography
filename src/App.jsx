@@ -4,6 +4,7 @@ import Header from "./components/Header/Header";
 import Footer from "./components/Footer/Footer";
 import Home from "./pages/Home/Home";
 import Galleries from "./pages/Galleries/Galleries";
+import AlbumDetail from "./pages/AlbumDetail/AlbumDetail";
 import BookNow from "./pages/BookNow/BookNow";
 import Admin from "./pages/Admin/Admin";
 import { REDEPLOY_REDIRECT_KEY } from "./pages/Admin/utils";
@@ -47,6 +48,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/galleries" element={<Galleries />} />
+          <Route path="/albums/:slug" element={<AlbumDetail />} />
           <Route path="/book-now" element={<BookNow />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
