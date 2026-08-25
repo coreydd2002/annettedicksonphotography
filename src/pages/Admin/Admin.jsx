@@ -7,33 +7,8 @@ import ConfirmDialog from "./ConfirmDialog";
 import AlbumDrawer from "./AlbumDrawer";
 import AddAlbumPanel from "./AddAlbumPanel";
 import { getCategory } from "../../../shared/categories";
+import { readAdminSession, writeAdminSession, clearAdminSession } from "../../adminSession";
 import "./Admin.css";
-
-const SESSION_KEY = "adp_admin_token";
-
-function readSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed.token || !parsed.expiresAt || parsed.expiresAt < Date.now()) {
-      sessionStorage.removeItem(SESSION_KEY);
-      return null;
-    }
-    return parsed;
-  } catch {
-    sessionStorage.removeItem(SESSION_KEY);
-    return null;
-  }
-}
-
-function writeSession(session) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
 
 // Replaces one album's slice of the flat items array with its (possibly
 // reordered/renamed/added-to/deleted-from) draft version from the workshop.
@@ -62,7 +37,7 @@ function submitOnEnter(handler) {
 }
 
 export default function Admin() {
-  const [session, setSession] = useState(() => readSession());
+  const [session, setSession] = useState(() => readAdminSession());
   const isAuthenticated = Boolean(session);
 
   const [password, setPassword] = useState("");
@@ -95,7 +70,7 @@ export default function Admin() {
         },
       });
       if (response.status === 401) {
-        clearSession();
+        clearAdminSession();
         setSession(null);
       }
       return response;
@@ -144,7 +119,7 @@ export default function Admin() {
       }
 
       const newSession = { token: data.token, expiresAt: data.expiresAt };
-      writeSession(newSession);
+      writeAdminSession(newSession);
       setSession(newSession);
       setPassword("");
       setLoginStatus("idle");
@@ -155,7 +130,7 @@ export default function Admin() {
   };
 
   const handleLogout = () => {
-    clearSession();
+    clearAdminSession();
     setSession(null);
   };
 

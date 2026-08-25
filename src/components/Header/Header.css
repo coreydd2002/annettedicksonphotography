@@ -78,15 +78,6 @@
   height: 30px;
 }
 
-@media (min-width: 769px) {
-  .header-instagram-btn {
-    position: absolute;
-    top: 50%;
-    right: 24px;
-    transform: translateY(-50%);
-  }
-}
-
 .nav-link {
   display: inline-block;
   font-family: var(--font-body);

@@ -4,6 +4,10 @@ export const NAV_LINKS = [
   { label: "Book Now", to: "/book-now" },
 ];
 
+// Appended to NAV_LINKS in Header.jsx, only while an admin session is
+// active — see src/adminSession.js.
+export const ADMIN_NAV_LINK = { label: "Manager", to: "/admin" };
+
 export const SITE = {
   brandName: "Annette Dickson",
   brandSuffix: "Photography",

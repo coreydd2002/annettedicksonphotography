@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { NAV_LINKS, SITE } from "../../config";
+import { NAV_LINKS, ADMIN_NAV_LINK, SITE } from "../../config";
+import { readAdminSession, onAdminSessionChange } from "../../adminSession";
 import { WooshLine } from "../decorations";
 import { IconMenu, IconClose, IconInstagram } from "../icons";
 import "./Header.css";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => Boolean(readAdminSession()));
   const location = useLocation();
 
   useEffect(() => {
@@ -19,6 +21,16 @@ export default function Header() {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
+
+  // Reacts immediately to sign-in/out (same tab, via a custom event — see
+  // adminSession.js) rather than only picking it up on the next navigation.
+  useEffect(() => {
+    const recheck = () => setIsAdmin(Boolean(readAdminSession()));
+    recheck();
+    return onAdminSessionChange(recheck);
+  }, [location.pathname]);
+
+  const navLinks = isAdmin ? [...NAV_LINKS, ADMIN_NAV_LINK] : NAV_LINKS;
 
   const navLinkClass = ({ isActive }) =>
     isActive ? "nav-link active" : "nav-link";
@@ -39,7 +51,7 @@ export default function Header() {
         <div className="header-right">
           <nav className="site-nav" aria-label="Primary">
             <ul>
-              {NAV_LINKS.map((link) => (
+              {navLinks.map((link) => (
                 <li key={link.to}>
                   <NavLink to={link.to} end={link.to === "/"} className={navLinkClass}>
                     {link.label}
@@ -73,7 +85,7 @@ export default function Header() {
 
       <div className={`mobile-nav ${menuOpen ? "open" : ""}`}>
         <ul>
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <li key={link.to}>
               <NavLink to={link.to} end={link.to === "/"} className={navLinkClass}>
                 {link.label}
