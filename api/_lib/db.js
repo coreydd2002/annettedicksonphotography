@@ -31,39 +31,58 @@ export async function getAllForAdmin() {
 }
 
 // For the public Galleries page: every album plus its cover photo (lowest
-// position) and photo count, computed here instead of client-side.
+// position), its next two photos for the hover "stack" effect, and photo
+// count — computed here instead of client-side.
 //
-// Uses a LATERAL join (not DISTINCT ON) to fetch each album's first photo
-// — DISTINCT ON is a Postgres extension CockroachDB doesn't implement,
-// while LATERAL joins are supported.
+// Ranks each album's photos by position with ROW_NUMBER() (a standard
+// window function, well-supported on CockroachDB) rather than a LATERAL
+// join, since fetching top-3-per-group this way needs no DISTINCT ON —
+// a Postgres extension CockroachDB doesn't implement (see db/schema.sql).
 export async function getAlbumsWithCovers() {
-  const rows = await sql`
-    SELECT
-      a.id, a.title, a.category,
-      cover.id AS cover_id, cover.src AS cover_src, cover.aspect AS cover_aspect,
-      COALESCE(counts.photo_count, 0)::int AS photo_count
-    FROM albums a
-    LEFT JOIN LATERAL (
-      SELECT id, src, aspect FROM photos
-      WHERE album_id = a.id
-      ORDER BY "position" ASC
-      LIMIT 1
-    ) cover ON true
-    LEFT JOIN (
-      SELECT album_id, COUNT(*) AS photo_count FROM photos GROUP BY album_id
-    ) counts ON counts.album_id = a.id
-    ORDER BY a.created_at ASC
-  `;
+  const [albumRows, photoRows] = await Promise.all([
+    sql`
+      SELECT a.id, a.title, a.category, COALESCE(counts.photo_count, 0)::int AS photo_count
+      FROM albums a
+      LEFT JOIN (
+        SELECT album_id, COUNT(*) AS photo_count FROM photos GROUP BY album_id
+      ) counts ON counts.album_id = a.id
+      ORDER BY a.created_at ASC
+    `,
+    sql`
+      SELECT id, album_id AS "albumId", src, aspect
+      FROM (
+        SELECT id, album_id, src, aspect,
+               ROW_NUMBER() OVER (PARTITION BY album_id ORDER BY "position" ASC) AS rn
+        FROM photos
+      ) ranked
+      WHERE rn <= 3
+      ORDER BY album_id, rn ASC
+    `,
+  ]);
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    category: row.category,
-    coverPhoto: row.cover_id
-      ? { id: row.cover_id, src: row.cover_src, aspect: row.cover_aspect }
-      : null,
-    photoCount: row.photo_count,
-  }));
+  const photosByAlbum = new Map();
+  for (const photo of photoRows) {
+    const list = photosByAlbum.get(photo.albumId) ?? [];
+    list.push(photo);
+    photosByAlbum.set(photo.albumId, list);
+  }
+
+  return albumRows.map((row) => {
+    const [cover, ...stack] = photosByAlbum.get(row.id) ?? [];
+    return {
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      coverPhoto: cover ? { id: cover.id, src: cover.src, aspect: cover.aspect } : null,
+      stackPhotos: stack.map((p) => ({ id: p.id, src: p.src, aspect: p.aspect })),
+      // CockroachDB's INT/INTEGER is a 64-bit alias for INT8, so even with
+      // the ::int cast above this column still arrives over the wire typed
+      // as int8 — postgres.js stringifies int8 values by default to avoid
+      // silently losing precision on values beyond Number.MAX_SAFE_INTEGER,
+      // so without this it comes back as "9" instead of 9.
+      photoCount: Number(row.photo_count),
+    };
+  });
 }
 
 // For the public AlbumDetail page: one album plus its photos, in order.

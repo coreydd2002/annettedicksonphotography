@@ -5,8 +5,14 @@
 }
 
 .album-tile {
-  position: relative;
   display: block;
+}
+
+/* Wraps just the image + its stack layers, sized to the cover photo's
+   aspect ratio — kept separate from the caption below so the stack's
+   inset:0 sizing doesn't stretch down through the caption text. */
+.album-tile-media {
+  position: relative;
 }
 
 /* The visible, clipped card — the stack layers behind it are deliberately
@@ -53,6 +59,17 @@
   height: 100%;
 }
 
+/* Blurred and darkened so the crisp cover photo in front reads as the
+   "active" one — deeper layers are blurred and darkened a bit more, for
+   a subtle sense of depth. */
+.album-stack-layer-1 .album-stack-image {
+  filter: blur(2px) brightness(0.72);
+}
+
+.album-stack-layer-2 .album-stack-image {
+  filter: blur(4px) brightness(0.58);
+}
+
 .album-stack-layer-1 {
   z-index: 2;
   transform: rotate(-4deg) translate(-5px, 4px) scale(0.96);
@@ -73,30 +90,24 @@
   transform: rotate(12deg) translate(15px, 11px) scale(0.93);
 }
 
-.album-tile-overlay {
-  position: absolute;
-  inset: 0;
+.album-tile-caption {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(26, 26, 26, 0.55);
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  color: var(--color-white);
+  gap: 4px;
+  margin-top: 14px;
   text-align: center;
-  padding: 16px;
-}
-
-.album-tile:hover .album-tile-overlay,
-.album-tile:focus-visible .album-tile-overlay {
-  opacity: 1;
 }
 
 .album-tile-title {
   font-family: var(--font-heading);
   font-size: 1.2rem;
+  color: var(--color-ink);
+  transition: color 0.2s ease;
+}
+
+.album-tile:hover .album-tile-title,
+.album-tile:focus-visible .album-tile-title {
+  color: var(--theme-accent-dark, var(--color-lavender-dark));
 }
 
 .album-tile-meta {
@@ -104,5 +115,5 @@
   font-size: 0.7rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--theme-accent, var(--color-lavender));
+  color: var(--theme-accent-dark, var(--color-lavender-dark));
 }
