@@ -1,5 +1,18 @@
 {
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  ],
+  "images": {
+    "sizes": [640],
+    "domains": [],
+    "qualities": [90],
+    "formats": ["image/avif", "image/webp"],
+    "minimumCacheTTL": 2678400,
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "^[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com$"
+      }
+    ]
+  }
 }

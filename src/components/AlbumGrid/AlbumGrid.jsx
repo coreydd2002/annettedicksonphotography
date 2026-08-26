@@ -30,7 +30,6 @@ export default function AlbumGrid({ albums }) {
               data-theme={album.category}
             >
               <span className="album-tile-media">
-                <span className="album-tile-fan" aria-hidden="true"></span>
                 <span className="album-tile-frame">
                   <PlaceholderImage
                     src={album.coverPhoto?.src}
@@ -39,6 +38,7 @@ export default function AlbumGrid({ albums }) {
                     aspect={aspect}
                     objectPosition={focusToObjectPosition(album.coverPhoto)}
                     className="album-tile-image"
+                    optimizeWidth={640}
                   />
                 </span>
               </span>

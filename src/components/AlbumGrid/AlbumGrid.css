@@ -8,82 +8,45 @@
   display: block;
 }
 
-/* Wraps just the image + its fan cards, sized to the cover photo's aspect
-   ratio — kept separate from the caption below so the fan's inset:0 sizing
-   doesn't stretch down through the caption text. */
+/* Wraps just the framed cover photo, sized to its aspect ratio — kept
+   separate from the caption below so the hover lift only moves the photo,
+   not the caption box beneath it. */
 .album-tile-media {
+  display: block;
   position: relative;
 }
 
-/* The visible, clipped card — the fan cards behind it are deliberately
-   siblings, not children, of this frame, so their fanned-out corners can
-   peek out past its rounded edges instead of being clipped along with it. */
+/* An off-white mat around the photo, like a print in a frame. Padding (not
+   a plain border) is what reads as the mat — the photo sits inset from it
+   on all sides. Lifts up with a deeper shadow on hover/focus. */
 .album-tile-frame {
-  position: relative;
-  z-index: 2;
   display: block;
-  overflow: hidden;
+  padding: 10px;
+  background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: 2px;
-}
-
-/* Two plain gray "cards" fanned out from behind the cover on hover, hinting
-   there's more inside the album — no photo data needed, so nothing extra
-   to fetch for this. Pure CSS pseudo-elements sized to match the frame;
-   at rest they sit exactly underneath it (rotate(0), opacity 0) so no
-   sliver shows until hover fans them open. */
-.album-tile-fan {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.album-tile-fan::before,
-.album-tile-fan::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  opacity: 0;
-  transform-origin: bottom left;
-  transform: rotate(0deg);
+  box-shadow: 0 2px 6px rgba(26, 26, 26, 0.08);
   transition:
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.3s ease;
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
 }
 
-.album-tile-fan::before {
-  z-index: 2;
-  background: rgba(150, 150, 150, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 6px 16px rgba(26, 26, 26, 0.2);
+.album-tile:hover .album-tile-frame,
+.album-tile:focus-visible .album-tile-frame {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 30px rgba(26, 26, 26, 0.18);
 }
 
-.album-tile-fan::after {
-  z-index: 1;
-  background: rgba(90, 90, 90, 0.6);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 4px 12px rgba(26, 26, 26, 0.22);
-}
-
-.album-tile:hover .album-tile-fan::before,
-.album-tile:focus-visible .album-tile-fan::before {
-  opacity: 1;
-  transform: rotate(9deg);
-}
-
-.album-tile:hover .album-tile-fan::after,
-.album-tile:focus-visible .album-tile-fan::after {
-  opacity: 1;
-  transform: rotate(18deg);
-}
-
+/* The caption gets its own off-white card too, rather than sitting
+   directly on the page background, so it reads as a matching second panel
+   under the frame instead of bare text. */
 .album-tile-caption {
+  display: block;
   margin-top: 14px;
+  padding: 12px 16px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
   text-align: center;
 }
 

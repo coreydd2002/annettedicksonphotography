@@ -19,6 +19,7 @@ export default function GalleryGrid({ items, onItemClick }) {
               variant={getCategory(item.category)?.variant}
               aspect={item.aspect}
               className="gallery-tile-image"
+              optimizeWidth={640}
             />
           </button>
         </li>
