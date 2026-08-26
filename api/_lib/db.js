@@ -32,13 +32,12 @@ export async function getAllForAdmin() {
 }
 
 // For the public Galleries page: every album plus its cover photo (lowest
-// position), its next two photos for the hover "stack" effect, and photo
-// count — computed here instead of client-side.
+// position) and photo count — computed here instead of client-side.
 //
 // Ranks each album's photos by position with ROW_NUMBER() (a standard
 // window function, well-supported on CockroachDB) rather than a LATERAL
-// join, since fetching top-3-per-group this way needs no DISTINCT ON —
-// a Postgres extension CockroachDB doesn't implement (see db/schema.sql).
+// join, since picking the top photo per group this way needs no DISTINCT
+// ON — a Postgres extension CockroachDB doesn't implement (see db/schema.sql).
 export async function getAlbumsWithCovers() {
   const [albumRows, photoRows] = await Promise.all([
     sql`
@@ -57,20 +56,14 @@ export async function getAlbumsWithCovers() {
                ROW_NUMBER() OVER (PARTITION BY album_id ORDER BY "position" ASC) AS rn
         FROM photos
       ) ranked
-      WHERE rn <= 3
-      ORDER BY album_id, rn ASC
+      WHERE rn = 1
     `,
   ]);
 
-  const photosByAlbum = new Map();
-  for (const photo of photoRows) {
-    const list = photosByAlbum.get(photo.albumId) ?? [];
-    list.push(photo);
-    photosByAlbum.set(photo.albumId, list);
-  }
+  const coverByAlbum = new Map(photoRows.map((photo) => [photo.albumId, photo]));
 
   return albumRows.map((row) => {
-    const [cover, ...stack] = photosByAlbum.get(row.id) ?? [];
+    const cover = coverByAlbum.get(row.id);
     return {
       id: row.id,
       title: row.title,
@@ -78,13 +71,6 @@ export async function getAlbumsWithCovers() {
       coverPhoto: cover
         ? { id: cover.id, src: cover.src, aspect: cover.aspect, focusX: cover.focusX, focusY: cover.focusY }
         : null,
-      stackPhotos: stack.map((p) => ({
-        id: p.id,
-        src: p.src,
-        aspect: p.aspect,
-        focusX: p.focusX,
-        focusY: p.focusY,
-      })),
       // CockroachDB's INT/INTEGER is a 64-bit alias for INT8, so even with
       // the ::int cast above this column still arrives over the wire typed
       // as int8 — postgres.js stringifies int8 values by default to avoid

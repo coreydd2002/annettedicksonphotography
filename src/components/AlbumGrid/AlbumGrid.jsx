@@ -21,7 +21,6 @@ export default function AlbumGrid({ albums }) {
         // the photos themselves keep their true aspect ratio once you're
         // inside the album (see GalleryGrid/Lightbox on AlbumDetail).
         const aspect = "1 / 1";
-        const stackPhotos = album.stackPhotos ?? [];
 
         return (
           <li key={album.id} className="album-grid-item">
@@ -31,25 +30,7 @@ export default function AlbumGrid({ albums }) {
               data-theme={album.category}
             >
               <span className="album-tile-media">
-                {stackPhotos.length > 0 && (
-                  <span className="album-stack" aria-hidden="true">
-                    {stackPhotos.map((photo, index) => (
-                      <span
-                        key={photo.id}
-                        className={`album-stack-layer album-stack-layer-${index + 1}`}
-                      >
-                        <PlaceholderImage
-                          src={photo.src}
-                          variant={category?.variant}
-                          aspect={aspect}
-                          objectPosition={focusToObjectPosition(photo)}
-                          showIcon={false}
-                          className="album-stack-image"
-                        />
-                      </span>
-                    ))}
-                  </span>
-                )}
+                <span className="album-tile-fan" aria-hidden="true"></span>
                 <span className="album-tile-frame">
                   <PlaceholderImage
                     src={album.coverPhoto?.src}

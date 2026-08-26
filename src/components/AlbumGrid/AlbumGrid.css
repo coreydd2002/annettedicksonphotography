@@ -8,14 +8,14 @@
   display: block;
 }
 
-/* Wraps just the image + its stack layers, sized to the cover photo's
-   aspect ratio — kept separate from the caption below so the stack's
-   inset:0 sizing doesn't stretch down through the caption text. */
+/* Wraps just the image + its fan cards, sized to the cover photo's aspect
+   ratio — kept separate from the caption below so the fan's inset:0 sizing
+   doesn't stretch down through the caption text. */
 .album-tile-media {
   position: relative;
 }
 
-/* The visible, clipped card — the stack layers behind it are deliberately
+/* The visible, clipped card — the fan cards behind it are deliberately
    siblings, not children, of this frame, so their fanned-out corners can
    peek out past its rounded edges instead of being clipped along with it. */
 .album-tile-frame {
@@ -27,59 +27,59 @@
   border-radius: 2px;
 }
 
-/* A couple of extra "photos" peeking out from behind the cover, hinting
-   there's more inside the album. Reuses the cover image itself — only
-   slivers of these ever show, so a repeated image reads fine. */
-.album-stack {
+/* Two plain gray "cards" fanned out from behind the cover on hover, hinting
+   there's more inside the album — no photo data needed, so nothing extra
+   to fetch for this. Pure CSS pseudo-elements sized to match the frame;
+   at rest they sit exactly underneath it (rotate(0), opacity 0) so no
+   sliver shows until hover fans them open. */
+.album-tile-fan {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
 }
 
-.album-stack-layer {
+.album-tile-fan::before,
+.album-tile-fan::after {
+  content: "";
   position: absolute;
   inset: 0;
-  overflow: hidden;
   border-radius: 2px;
-  box-shadow: 0 4px 14px rgba(26, 26, 26, 0.22);
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  transform-origin: bottom left;
+  transform: rotate(0deg);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
 }
 
-.album-stack-layer .album-stack-image {
-  width: 100%;
-  height: 100%;
-}
-
-/* Blurred and darkened so the crisp cover photo in front reads as the
-   "active" one — deeper layers are blurred and darkened a bit more, for
-   a subtle sense of depth. */
-.album-stack-layer-1 .album-stack-image {
-  filter: blur(2px) brightness(0.72);
-}
-
-.album-stack-layer-2 .album-stack-image {
-  filter: blur(4px) brightness(0.58);
-}
-
-.album-stack-layer-1 {
+.album-tile-fan::before {
   z-index: 2;
-  transform: rotate(-4deg) translate(-5px, 4px) scale(0.96);
+  background: rgba(150, 150, 150, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 6px 16px rgba(26, 26, 26, 0.2);
 }
 
-.album-stack-layer-2 {
+.album-tile-fan::after {
   z-index: 1;
-  transform: rotate(5deg) translate(6px, 6px) scale(0.93);
+  background: rgba(90, 90, 90, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(26, 26, 26, 0.22);
 }
 
-.album-tile:hover .album-stack-layer-1,
-.album-tile:focus-visible .album-stack-layer-1 {
-  transform: rotate(-11deg) translate(-14px, 9px) scale(0.96);
+.album-tile:hover .album-tile-fan::before,
+.album-tile:focus-visible .album-tile-fan::before {
+  opacity: 1;
+  transform: rotate(9deg);
 }
 
-.album-tile:hover .album-stack-layer-2,
-.album-tile:focus-visible .album-stack-layer-2 {
-  transform: rotate(12deg) translate(15px, 11px) scale(0.93);
+.album-tile:hover .album-tile-fan::after,
+.album-tile:focus-visible .album-tile-fan::after {
+  opacity: 1;
+  transform: rotate(18deg);
 }
 
 .album-tile-caption {
