@@ -29,21 +29,19 @@ export default function AlbumGrid({ albums }) {
               className="album-tile"
               data-theme={album.category}
             >
-              <span className="album-tile-media">
-                <span className="album-tile-frame">
-                  <PlaceholderImage
-                    src={album.coverPhoto?.src}
-                    alt={album.title}
-                    variant={category?.variant}
-                    aspect={aspect}
-                    objectPosition={focusToObjectPosition(album.coverPhoto)}
-                    className="album-tile-image"
-                    optimizeWidth={640}
-                  />
+              <span className="album-tile-frame">
+                <PlaceholderImage
+                  src={album.coverPhoto?.src}
+                  alt={album.title}
+                  variant={category?.variant}
+                  aspect={aspect}
+                  objectPosition={focusToObjectPosition(album.coverPhoto)}
+                  className="album-tile-image"
+                  optimizeWidth={640}
+                />
+                <span className="album-tile-caption">
+                  <span className="album-tile-title">{album.title}</span>
                 </span>
-              </span>
-              <span className="album-tile-caption">
-                <span className="album-tile-title">{album.title}</span>
               </span>
             </Link>
           </li>

@@ -3,7 +3,7 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "images": {
-    "sizes": [640],
+    "sizes": [640, 2400],
     "domains": [],
     "qualities": [90],
     "formats": ["image/avif", "image/webp"],

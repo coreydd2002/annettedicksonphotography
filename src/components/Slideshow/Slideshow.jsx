@@ -36,6 +36,7 @@ export default function Slideshow({ slides, interval = 5000 }) {
             variant={slide.variant}
             aspect="auto"
             showIcon={false}
+            optimizeWidth={2400}
             className={`slideshow-layer ${
               index === currentIndex ? "active" : ""
             }`}

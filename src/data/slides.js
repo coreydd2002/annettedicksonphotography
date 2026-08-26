@@ -10,7 +10,7 @@ const slides = [
     id: 2,
     eyebrow: "Portrait Photography",
     heading: "Quiet Portraits With Real Character",
-    src: "/ethan-fowles-web-513.webp",
+    src: "/addie-nelson-4412.jpg",
     variant: 2,
   },
   {
@@ -19,6 +19,13 @@ const slides = [
     heading: "Clean, Considered Product Imagery",
     src: "/pizza-peel-at-gma-neets-98.webp",
     variant: 3,
+  },
+  {
+    id: 4,
+    eyebrow: "Family Photography",
+    heading: "Family Moments, Honestly Told",
+    src: "/ong-family-5412.jpg",
+    variant: 4,
   },
 ];
 

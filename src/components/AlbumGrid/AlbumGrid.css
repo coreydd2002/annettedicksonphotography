@@ -8,20 +8,12 @@
   display: block;
 }
 
-/* Wraps just the framed cover photo, sized to its aspect ratio — kept
-   separate from the caption below so the hover lift only moves the photo,
-   not the caption box beneath it. */
-.album-tile-media {
-  display: block;
-  position: relative;
-}
-
-/* An off-white mat around the photo, like a print in a frame. Padding (not
-   a plain border) is what reads as the mat — the photo sits inset from it
-   on all sides. Lifts up with a deeper shadow on hover/focus. */
+/* One Polaroid-style card: photo and title share a single off-white mat,
+   frame, and shadow — no seam between them — and lift together as one
+   piece on hover/focus. */
 .album-tile-frame {
   display: block;
-  padding: 10px;
+  padding: 10px 10px 16px;
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: 2px;
@@ -37,16 +29,9 @@
   box-shadow: 0 18px 30px rgba(26, 26, 26, 0.18);
 }
 
-/* The caption gets its own off-white card too, rather than sitting
-   directly on the page background, so it reads as a matching second panel
-   under the frame instead of bare text. */
 .album-tile-caption {
   display: block;
-  margin-top: 14px;
-  padding: 12px 16px;
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: 2px;
+  margin-top: 12px;
   text-align: center;
 }
 
