@@ -35,10 +35,20 @@
   text-align: center;
 }
 
+/* Always reserves a two-line box — line-height 1.25 makes 4rem exactly two
+   lines at this font-size, so a one-line title leaves the second line
+   blank rather than shrinking the tile. line-clamp is a safety net should
+   a title ever exceed MAX_ALBUM_TITLE_LENGTH (shared/albums.js), which is
+   sized to fit within these two lines at the grid's narrowest tile width. */
 .album-tile-title {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-family: var(--font-heading);
   font-size: 1.6rem;
+  line-height: 1.25;
+  min-height: 4rem;
   color: var(--color-ink);
   transition: color 0.2s ease;
 }

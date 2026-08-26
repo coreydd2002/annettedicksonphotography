@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
 import { uploadPhotoBlob, generateAlbumId } from "./blobUpload";
 import { CATEGORIES } from "../../../shared/categories";
+import { MAX_ALBUM_TITLE_LENGTH } from "../../../shared/albums";
 import ConfirmDialog from "./ConfirmDialog";
 
 let pendingFileCounter = 0;
@@ -172,6 +173,7 @@ export default function AddAlbumPanel({ token, onClose, onDirtyChange, onSaveNew
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            maxLength={MAX_ALBUM_TITLE_LENGTH}
             required
           />
         </div>

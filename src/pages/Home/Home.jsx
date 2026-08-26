@@ -10,12 +10,13 @@ import "./Home.css";
 
 // Home-page-local hero photo per category — kept here rather than on the
 // shared registry since api/*.js has no use for a homepage image path.
-// Family and Engagement have no source photo yet, so their tiles fall back
-// to PlaceholderImage's themed gradient, same as every gallery seed item.
+// Engagement has no source photo yet, so its tile falls back to
+// PlaceholderImage's themed gradient, same as every gallery seed item.
 const HOME_IMAGES = {
   wedding: "/rings.webp",
   portrait: "/2022.05.26_sarah-wallace-360.webp",
   product: "/reset-your-nest-web-size-straightened-2-2.webp",
+  family: "/ogden-family-9579.jpg",
 };
 
 export default function Home() {
@@ -84,6 +85,7 @@ export default function Home() {
                         aspect="4 / 5"
                         variant={category.variant}
                         className="category-card-image"
+                        optimizeWidth={640}
                       />
                       <span className="category-card-label">
                         {category.label}

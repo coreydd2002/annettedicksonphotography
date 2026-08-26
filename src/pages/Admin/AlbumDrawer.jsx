@@ -3,6 +3,7 @@ import PlaceholderImage from "../../components/PlaceholderImage/PlaceholderImage
 import Lightbox from "../../components/Lightbox/Lightbox";
 import { IconEdit, IconFrame, IconTrash } from "../../components/icons";
 import { getCategory } from "../../../shared/categories";
+import { MAX_ALBUM_TITLE_LENGTH } from "../../../shared/albums";
 import { detectImageAspect, MAX_IMAGE_BYTES } from "./utils";
 import { uploadPhotoBlob } from "./blobUpload";
 import ConfirmDialog from "./ConfirmDialog";
@@ -182,6 +183,7 @@ export default function AlbumDrawer({
           className="admin-drawer-title-input"
           value={draftTitle}
           onChange={(event) => setDraftTitle(event.target.value)}
+          maxLength={MAX_ALBUM_TITLE_LENGTH}
           aria-label="Album title"
         />
       </div>
