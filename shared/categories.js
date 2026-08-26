@@ -14,7 +14,6 @@ export const CATEGORIES = [
   { key: "portrait", label: "Portrait", variant: 1 },
   { key: "product", label: "Product", variant: 2 },
   { key: "family", label: "Family", variant: 3 },
-  { key: "engagement", label: "Engagement", variant: 4 },
 ];
 
 export const CATEGORY_KEYS = new Set(CATEGORIES.map((category) => category.key));

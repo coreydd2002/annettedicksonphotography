@@ -62,9 +62,9 @@ export default function Galleries() {
           <span className="eyebrow">Portfolio</span>
           <h1>Galleries</h1>
           <p className="galleries-intro">
-            A collection of weddings, portraits, family sessions,
-            engagements, and product work — each shaped around real moments
-            and honest light.
+            A collection of weddings, portraits, family sessions, and
+            product work — each shaped around real moments and honest
+            light.
           </p>
 
           <div

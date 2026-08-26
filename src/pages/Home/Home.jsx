@@ -10,8 +10,8 @@ import "./Home.css";
 
 // Home-page-local hero photo per category — kept here rather than on the
 // shared registry since api/*.js has no use for a homepage image path.
-// Engagement has no source photo yet, so its tile falls back to
-// PlaceholderImage's themed gradient, same as every gallery seed item.
+// Any category missing here falls back to PlaceholderImage's themed
+// gradient, same as every gallery seed item.
 const HOME_IMAGES = {
   wedding: "/rings.webp",
   portrait: "/2022.05.26_sarah-wallace-360.webp",

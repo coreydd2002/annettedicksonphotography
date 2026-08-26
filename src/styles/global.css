@@ -36,6 +36,10 @@
   --color-family-dark: #a96c7d;
   --color-family-pale: #f6e3e8;
 
+  /* "engagement" is no longer a category (see shared/categories.js) so
+     there's no [data-theme="engagement"] rule below, but this token is
+     still live — it's PlaceholderImage.css's variant-4 gradient, reused
+     as a general-purpose fallback color (e.g. Home's About portrait). */
   --color-engagement: #92a382;
   --color-engagement-dark: #70805f;
   --color-engagement-pale: #e8ecdf;
@@ -71,11 +75,6 @@
   --theme-accent: var(--color-family);
   --theme-accent-dark: var(--color-family-dark);
   --theme-accent-pale: var(--color-family-pale);
-}
-[data-theme="engagement"] {
-  --theme-accent: var(--color-engagement);
-  --theme-accent-dark: var(--color-engagement-dark);
-  --theme-accent-pale: var(--color-engagement-pale);
 }
 
 *,

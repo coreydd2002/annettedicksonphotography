@@ -13,7 +13,7 @@
 CREATE TABLE albums (
   id         TEXT PRIMARY KEY,                 -- slug, same value used in URLs today
   title      TEXT NOT NULL,
-  category   TEXT NOT NULL CHECK (category IN ('wedding','portrait','product','family','engagement')),
+  category   TEXT NOT NULL CHECK (category IN ('wedding','portrait','product','family')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -21,7 +21,7 @@ CREATE TABLE albums (
 CREATE TABLE photos (
   id         TEXT PRIMARY KEY,                 -- slugify(title) + "-" + uuid8, generated client-side
   album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-  category   TEXT NOT NULL CHECK (category IN ('wedding','portrait','product','family','engagement')),
+  category   TEXT NOT NULL CHECK (category IN ('wedding','portrait','product','family')),
   title      TEXT NOT NULL,
   aspect     TEXT NOT NULL,                    -- e.g. "4 / 5"
   src        TEXT NOT NULL,                    -- Vercel Blob public URL
