@@ -61,6 +61,14 @@
   padding-top: 0;
 }
 
+/* Wider and tighter than the sitewide .container so the collage reads as
+   its own full-width showcase, not framed the same as reading-width
+   copy — the header/intro above keeps the standard width on purpose. */
+.galleries-grid-section .container {
+  max-width: 1400px;
+  padding: 0 14px;
+}
+
 .galleries-status {
   text-align: center;
   color: var(--color-ink-soft);
