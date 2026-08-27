@@ -89,19 +89,20 @@
   .filter-tabs {
     position: fixed;
     top: calc(var(--header-height) + 48px);
-    left: 20px;
+    left: 16px;
     z-index: 10;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    width: 150px;
+    width: 110px;
     gap: 2px;
     overflow-x: visible;
     padding-bottom: 0;
   }
 
   .filter-tab {
-    padding: 10px 0 10px 16px;
+    padding: 10px 0 10px 10px;
+    text-align: left;
     border-left: 2px solid transparent;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
@@ -117,22 +118,20 @@
     border-left-color: var(--color-lavender-dark);
   }
 
-  /* Reserving 190px on the left (sidebar + breathing room) for the filter
+  /* Reserving 140px on the left (sidebar + breathing room) for the filter
      column has to come from somewhere — grow max-width by that same
-     amount (1400 -> 1576) rather than letting it eat into the collage's
-     existing width budget. On screens >= ~1576px wide this fully restores
+     amount (1400 -> 1526) rather than letting it eat into the collage's
+     existing width budget. On screens >= ~1526px wide this fully restores
      the original ~1372px content width (and therefore the original
      column/bucket count), with the sidebar sitting in genuinely reclaimed
      space rather than space stolen from the photos. Narrower desktop
-     windows (roughly 1025-1576px) still lose a bit of width to the
-     sidebar — there's a hard physical floor there (a persistent sidebar
-     and the pre-sidebar collage width can't both fit in less screen than
-     their sum requires), but this keeps that loss to a minimum and keeps
-     5 columns intact down to about a 1230px-wide window instead of losing
-     a column as early as ~1280px.
+     windows still lose a little width to the sidebar — a persistent
+     sidebar and the pre-sidebar collage width can't both fit in less
+     screen than their sum requires — but keeping the sidebar itself
+     compact keeps that loss as small as it can be.
   */
   .galleries-grid-section .container {
-    max-width: 1576px;
-    padding-left: 190px;
+    max-width: 1526px;
+    padding-left: 140px;
   }
 }
