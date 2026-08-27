@@ -80,3 +80,44 @@
     gap: 26px;
   }
 }
+
+/* Desktop: filters move to a fixed left column instead of a horizontal
+   row above the grid, so they stay reachable while scrolling through a
+   long collage. Tablet/mobile keep the original horizontal top row —
+   a fixed sidebar has no comfortable width to live in below this point. */
+@media (min-width: 1025px) {
+  .filter-tabs {
+    position: fixed;
+    top: calc(var(--header-height) + 48px);
+    left: 32px;
+    z-index: 10;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 160px;
+    gap: 2px;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .filter-tab {
+    padding: 10px 0 10px 16px;
+    border-left: 2px solid transparent;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* The underline indicator reads as a horizontal-tab affordance; swap it
+     for a left-edge accent that fits a stacked column instead. */
+  .filter-tab::after {
+    content: none;
+  }
+
+  .filter-tab:hover,
+  .filter-tab.active {
+    border-left-color: var(--color-lavender-dark);
+  }
+
+  .galleries-grid-section .container {
+    padding-left: 240px;
+  }
+}
