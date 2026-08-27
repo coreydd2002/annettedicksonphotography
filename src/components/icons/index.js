@@ -7,6 +7,5 @@ export { default as IconInstagram } from "./IconInstagram";
 export { default as IconEye } from "./IconEye";
 export { default as IconEyeOff } from "./IconEyeOff";
 export { default as IconEdit } from "./IconEdit";
-export { default as IconFrame } from "./IconFrame";
 export { default as IconTrash } from "./IconTrash";
-export { default as IconMallet } from "./IconMallet";
+export { default as IconDots } from "./IconDots";

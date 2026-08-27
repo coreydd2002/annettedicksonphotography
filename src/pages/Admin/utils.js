@@ -29,8 +29,7 @@ export function detectImageAspect(file) {
   });
 }
 
-// Shared by photo ids (slugify(title) + "-" + uuid8, in blobUpload.js) and
-// album ids (same pattern, generateAlbumId() in blobUpload.js).
+// Used to build photo ids: slugify(title) + "-" + uuid8, see blobUpload.js.
 export function slugify(value) {
   const slug = value
     .toLowerCase()

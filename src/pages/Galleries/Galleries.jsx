@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import AlbumGrid from "../../components/AlbumGrid/AlbumGrid";
+import GalleryGrid from "../../components/GalleryGrid/GalleryGrid";
+import Lightbox from "../../components/Lightbox/Lightbox";
 import { CATEGORIES } from "../../../shared/categories";
 import "./Galleries.css";
 
@@ -15,25 +16,27 @@ export default function Galleries() {
   const [activeFilter, setActiveFilter] = useState(() =>
     resolveFilter(searchParams.get("category")),
   );
-  const [albums, setAlbums] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | idle | error
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
     setActiveFilter(resolveFilter(searchParams.get("category")));
+    setLightboxIndex(null);
   }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
 
-    fetch("/api/albums")
+    fetch("/api/photos")
       .then((response) => {
         if (!response.ok) throw new Error("Failed to load galleries");
         return response.json();
       })
       .then((data) => {
         if (cancelled) return;
-        setAlbums(data.albums || []);
+        setPhotos(data.photos || []);
         setStatus("idle");
       })
       .catch(() => {
@@ -45,11 +48,11 @@ export default function Galleries() {
     };
   }, []);
 
-  const filteredAlbums = useMemo(() => {
+  const filteredPhotos = useMemo(() => {
     return activeFilter === "all"
-      ? albums
-      : albums.filter((album) => album.category === activeFilter);
-  }, [activeFilter, albums]);
+      ? photos
+      : photos.filter((photo) => photo.category === activeFilter);
+  }, [activeFilter, photos]);
 
   const handleFilterChange = (key) => {
     setSearchParams(key === "all" ? {} : { category: key });
@@ -98,13 +101,25 @@ export default function Galleries() {
             </p>
           ) : status === "loading" ? (
             <p className="galleries-status">Loading…</p>
-          ) : filteredAlbums.length === 0 ? (
-            <p className="galleries-status">No albums here yet — check back soon.</p>
+          ) : filteredPhotos.length === 0 ? (
+            <p className="galleries-status">No photos here yet — check back soon.</p>
           ) : (
-            <AlbumGrid albums={filteredAlbums} />
+            <GalleryGrid items={filteredPhotos} onItemClick={setLightboxIndex} />
           )}
         </div>
       </section>
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          items={filteredPhotos}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onPrev={() =>
+            setLightboxIndex((i) => (i - 1 + filteredPhotos.length) % filteredPhotos.length)
+          }
+          onNext={() => setLightboxIndex((i) => (i + 1) % filteredPhotos.length)}
+        />
+      )}
     </>
   );
 }

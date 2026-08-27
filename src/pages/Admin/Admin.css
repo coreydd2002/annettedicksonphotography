@@ -205,7 +205,7 @@
 
 .admin-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 3fr 1fr;
   gap: 40px;
   flex: 1;
   min-height: 0;
@@ -262,244 +262,143 @@
   flex-shrink: 0;
 }
 
-.admin-list-hint {
-  font-size: 0.78rem;
-  color: var(--color-ink-soft);
-  margin: 0 0 14px;
+/* Category filter bar — a genuine multi-select (every chip toggles
+   independently), unlike the public Galleries page's single-select tabs. */
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.admin-drawer-photo-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.admin-photo-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px;
+.admin-filter-chip {
+  padding: 6px 14px;
   border: 1px solid var(--color-border);
-  border-radius: 2px;
+  border-radius: 999px;
   background: var(--color-white);
-}
-
-/* Fixed-width slot to the left of the thumbnail — empty for the current
-   cover photo, otherwise holds the "make this the cover" button, so
-   thumbnails still line up whether or not a row has that button. */
-.admin-make-cover-slot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  flex-shrink: 0;
-}
-
-.admin-make-cover-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: none;
-  border: none;
   color: var(--color-ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.admin-make-cover-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.admin-make-cover-btn:hover,
-.admin-make-cover-btn:focus-visible {
+.admin-filter-chip:hover,
+.admin-filter-chip:focus-visible {
+  border-color: var(--theme-accent, var(--color-lavender));
   color: var(--theme-accent-dark, var(--color-lavender-dark));
 }
 
-.admin-photo-thumb {
-  width: 72px;
-  flex-shrink: 0;
+.admin-filter-chip[aria-pressed="true"] {
+  background: var(--theme-accent-pale, var(--color-lavender-pale));
+  border-color: var(--theme-accent, var(--color-lavender));
+  color: var(--theme-accent-dark, var(--color-lavender-dark));
+}
+
+/* Flat photo list (left panel) */
+.admin-photo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-photo-row {
+  border: 1px solid var(--color-border);
   border-radius: 2px;
+  background: var(--color-white);
   overflow: hidden;
 }
 
-/* Wraps a thumbnail (in the album list or the editing panel) to make it
-   clickable, opening that photo in the same Lightbox the public galleries
-   use — without changing how the thumbnail itself looks. */
-.admin-thumb-btn {
-  display: block;
-  flex-shrink: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: opacity 0.15s ease;
-}
-
-.admin-thumb-btn:hover,
-.admin-thumb-btn:focus-visible {
-  opacity: 0.85;
-}
-
-/* Marks the first photo in the editing panel's list as the album's cover —
-   whichever photo is dragged into this slot becomes the public cover. */
-.admin-photo-thumb-wrap {
+.admin-photo-row-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.admin-photo-row-header:hover {
+  background: var(--color-paper);
+}
+
+.admin-photo-row-chevron {
+  display: block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  color: var(--color-ink-soft);
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.admin-photo-row-chevron.expanded {
+  transform: rotate(45deg);
+}
+
+.admin-photo-row-filename {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-photo-row-category-badge {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-accent-dark, var(--color-lavender-dark));
+  white-space: nowrap;
+}
+
+.admin-photo-row-inline-edit {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--theme-accent, var(--color-lavender));
+  border-radius: 2px;
+  background: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.admin-photo-row-inline-edit:focus {
+  outline: none;
+}
+
+.admin-photo-row-category-select {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--theme-accent, var(--color-lavender));
+  border-radius: 2px;
+  background: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-ink);
+}
+
+.admin-photo-row-actions {
+  display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
 }
 
-.admin-cover-badge {
-  font-family: var(--font-body);
-  font-size: 0.56rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--theme-accent-dark, var(--color-lavender-dark));
-  white-space: nowrap;
+.admin-photo-row-menu-wrap {
+  position: relative;
 }
 
-.admin-thumb-btn.is-cover {
-  border: 2px solid var(--theme-accent, var(--color-lavender));
-  border-radius: 4px;
-  padding: 2px;
-}
-
-.admin-thumb-btn.is-cover .admin-photo-thumb {
-  border-radius: 2px;
-}
-
-.admin-photo-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.admin-photo-title {
-  font-family: var(--font-heading);
-  font-size: 1.2rem;
-  color: var(--color-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-photo-actions {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.admin-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  border-radius: 2px;
-  color: var(--color-ink-soft);
-  cursor: pointer;
-}
-
-.admin-delete-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.admin-delete-btn:hover,
-.admin-delete-btn:focus-visible {
-  color: #d9433a;
-  background: #fbeceb;
-}
-
-/* Album list (right panel) */
-.admin-album-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.admin-album-card {
-  border: 1px solid var(--color-border);
-  border-radius: 2px;
-  background: var(--color-white);
-  overflow: hidden;
-}
-
-.admin-album-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px;
-}
-
-.admin-album-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-ink-soft);
-}
-
-.admin-album-chevron {
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-right: 1.6px solid currentColor;
-  border-bottom: 1.6px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 0.2s ease;
-}
-
-.admin-album-chevron.expanded {
-  transform: rotate(45deg);
-}
-
-.admin-album-thumb {
-  width: 56px;
-  flex-shrink: 0;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.admin-album-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.admin-album-title {
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
-  color: var(--color-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-album-category {
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-lavender-dark);
-}
-
-.admin-album-edit {
+.admin-photo-row-menu-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -513,48 +412,107 @@
   cursor: pointer;
 }
 
-.admin-album-edit svg {
+.admin-photo-row-menu-btn svg {
   width: 18px;
   height: 18px;
 }
 
-.admin-album-edit:hover,
-.admin-album-edit:focus-visible {
+.admin-photo-row-menu-btn:hover,
+.admin-photo-row-menu-btn:focus-visible {
   color: var(--color-lavender-dark);
   background: var(--color-lavender-pale);
 }
 
-.admin-album-photos {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 14px 14px 52px;
-  border-top: 1px solid var(--color-border);
+.admin-photo-row-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  min-width: 170px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  box-shadow: 0 6px 20px rgba(26, 26, 26, 0.12);
+  overflow: hidden;
 }
 
-.admin-album-photo-row {
+.admin-photo-row-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.admin-album-photo-thumb {
-  width: 36px;
-  flex-shrink: 0;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.admin-album-photo-title {
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--color-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
 }
 
-/* "Add an Album" pending file list */
+.admin-photo-row-menu-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-ink-soft);
+}
+
+.admin-photo-row-menu-item:hover,
+.admin-photo-row-menu-item:focus-visible {
+  background: var(--color-paper);
+}
+
+/* Deliberately red at rest, not only on hover — the one control in a
+   dense list that should always read as destructive. */
+.admin-photo-row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  color: #d9433a;
+  cursor: pointer;
+}
+
+.admin-photo-row-delete svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-photo-row-delete:hover,
+.admin-photo-row-delete:focus-visible {
+  background: #fbeceb;
+}
+
+.admin-photo-row-error {
+  margin: 0;
+  padding: 0 10px 10px;
+  font-size: 0.76rem;
+  color: #9a3b34;
+}
+
+.admin-photo-row-expanded {
+  padding: 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-paper);
+}
+
+.admin-photo-row-full {
+  display: block;
+  max-width: 480px;
+  max-height: 70vh;
+  width: auto;
+  margin: 0 auto;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+/* "Add Photos" pending file list */
 .admin-pending-files {
   display: flex;
   flex-direction: column;
@@ -593,29 +551,52 @@
   flex-shrink: 0;
 }
 
+.admin-pending-file-category {
+  flex-shrink: 0;
+  max-width: 130px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  color: var(--color-ink);
+}
+
+.admin-pending-file-category.is-unset {
+  border-color: #f0c9c6;
+  color: #9a3b34;
+}
+
 .admin-pending-file-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   background: none;
   border: none;
-  padding: 2px 4px;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  text-decoration: underline;
+  border-radius: 2px;
   color: var(--color-ink-soft);
   cursor: pointer;
 }
 
-.admin-pending-file-remove:hover {
-  color: var(--color-ink);
+.admin-pending-file-remove svg {
+  width: 16px;
+  height: 16px;
 }
 
-/* The "workshop" — the right-hand half where adding/editing actually
-   happens. A tinted background (vs. the plain white Albums list on the
-   left) marks it as the working area rather than the current live-ish
-   view. It's an in-flow grid column, not an overlay, so the Albums list
-   stays interactive while it's open — switching what it shows (a
-   different album, "add new") is just a content swap, no transition. */
+.admin-pending-file-remove:hover,
+.admin-pending-file-remove:focus-visible {
+  color: #d9433a;
+  background: #fbeceb;
+}
+
+/* The "workshop" — the right-hand quarter where adding photos happens. A
+   tinted background (vs. the plain white photo list on the left) marks it
+   as the working area. It's an in-flow grid column, not an overlay, so
+   the photo list stays interactive while it's open. */
 .admin-workshop-panel {
   min-width: 0;
   min-height: 0;
@@ -630,27 +611,6 @@
   margin-bottom: 20px;
 }
 
-.admin-workshop-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  height: 100%;
-  text-align: center;
-  color: var(--color-ink-soft);
-}
-
-.admin-workshop-empty-icon {
-  width: 36px;
-  height: 36px;
-  color: var(--color-lavender);
-}
-
-.admin-workshop-empty p {
-  max-width: 32ch;
-}
-
 .admin-drawer-save-row {
   display: flex;
   gap: 12px;
@@ -659,41 +619,6 @@
 
 .admin-drawer-save-row .btn {
   flex: 1;
-}
-
-.admin-drawer-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 6px 0 24px;
-}
-
-.admin-drawer-title-icon {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  color: var(--color-ink-soft);
-}
-
-.admin-drawer-title-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 0;
-  border: none;
-  border-bottom: 1px solid transparent;
-  background: none;
-  font-family: var(--font-heading);
-  font-size: 1.7rem;
-  color: var(--color-ink);
-}
-
-.admin-drawer-title-input:hover {
-  border-bottom-color: var(--color-border);
-}
-
-.admin-drawer-title-input:focus {
-  outline: none;
-  border-bottom-color: var(--theme-accent, var(--color-lavender));
 }
 
 /* Add Photo slot — a dashed frame standing in for the next photo, rather
@@ -772,127 +697,7 @@
   height: 2px;
 }
 
-.admin-drawer-delete-album-row {
-  margin-top: 28px;
-  text-align: center;
-}
-
-.admin-drawer-delete-album {
-  width: auto;
-  padding: 8px 16px;
-  font-size: 0.7rem;
-  border-color: #d9433a;
-  color: #d9433a;
-}
-
-.admin-drawer-delete-album:hover,
-.admin-drawer-delete-album:focus-visible {
-  background: #d9433a;
-  color: var(--color-white);
-}
-
-/* Cover crop picker — opened from the cover photo's thumbnail. Shows the
-   photo at true size with a draggable square marking what the public
-   gallery's square crop will keep; everything outside it is dimmed via a
-   box-shadow spread clipped to the image by the wrap's overflow:hidden,
-   rather than a separate mask element. */
-.crop-picker {
-  position: fixed;
-  inset: 0;
-  z-index: 260;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.crop-picker-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(26, 26, 26, 0.75);
-}
-
-.crop-picker-panel {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 640px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: var(--color-white);
-  border-radius: 2px;
-  padding: 32px;
-  text-align: center;
-}
-
-.crop-picker-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: var(--color-ink-soft);
-  cursor: pointer;
-  padding: 6px;
-}
-
-.crop-picker-close:hover,
-.crop-picker-close:focus-visible {
-  color: var(--color-ink);
-}
-
-.crop-picker-hint {
-  margin: -8px 0 20px;
-  color: var(--color-ink-soft);
-  font-size: 0.85rem;
-}
-
-.crop-picker-image-wrap {
-  position: relative;
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  line-height: 0;
-}
-
-.crop-picker-image {
-  display: block;
-  max-width: 100%;
-  max-height: 60vh;
-}
-
-.crop-picker-frame {
-  position: absolute;
-  border: 2px solid var(--color-white);
-  outline: 1px solid rgba(26, 26, 26, 0.4);
-  box-shadow: 0 0 0 9999px rgba(26, 26, 26, 0.55);
-  cursor: grab;
-  touch-action: none;
-}
-
-.crop-picker-frame:active {
-  cursor: grabbing;
-}
-
-.crop-picker-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-.crop-picker-actions .btn {
-  flex: 1;
-  max-width: 200px;
-}
-
-@media (max-width: 480px) {
-  .crop-picker-panel {
-    padding: 24px 20px;
-  }
-}
-
-/* Delete confirmation popup, shared by photo and album deletes */
+/* Delete confirmation popup, shared by every destructive admin action */
 .confirm-dialog {
   position: fixed;
   inset: 0;
@@ -980,9 +785,5 @@
   .admin-panel,
   .admin-workshop-panel {
     padding: 24px 20px;
-  }
-
-  .admin-photo-card {
-    flex-wrap: wrap;
   }
 }

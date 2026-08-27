@@ -1,8 +1,8 @@
 // Single source of truth for the shoot-type category enum, shared by the
 // Vite frontend (src/) and the Vercel Node functions (api/). This is CODE,
-// checked into git and deployed with the app — unlike the `albums`/`photos`
-// tables in Postgres, which are DATA the admin panel reads/writes live via
-// api/_lib/db.js. The category CHECK constraints in db/schema.sql must be
+// checked into git and deployed with the app — unlike the `photos` table
+// in Postgres, which is DATA the admin panel reads/writes live via
+// api/_lib/db.js. The category CHECK constraint in db/schema.sql must be
 // kept in sync with this list by hand — SQL can't import a JS file.
 //
 // `variant` (0-4) maps each category to one of PlaceholderImage's five

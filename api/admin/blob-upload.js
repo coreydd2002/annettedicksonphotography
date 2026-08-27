@@ -2,9 +2,9 @@ import { handleUpload } from "@vercel/blob/client";
 import { verifyToken } from "../_lib/auth.js";
 import { ALLOWED_CONTENT_TYPES, MAX_IMAGE_BYTES } from "../../shared/images.js";
 
-// Matches albums/{albumId}/{photoId}.{ext} — both id segments are always
-// slugify()'d client-side, so this is deliberately strict.
-const PATH_PATTERN = /^albums\/[a-z0-9-]+\/[a-z0-9-]+\.(jpg|png|webp)$/;
+// Matches photos/{photoId}.{ext} — the id is always slugify()'d
+// client-side, so this is deliberately strict.
+const PATH_PATTERN = /^photos\/[a-z0-9-]+\.(jpg|png|webp)$/;
 
 // The token-exchange endpoint behind client-direct Blob uploads: the
 // browser uploads the image straight to Vercel Blob, never through this

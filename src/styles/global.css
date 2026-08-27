@@ -54,8 +54,9 @@
   --container-width: 1180px;
 }
 
-/* Elements carrying data-theme="<category-key>" (album pages, album/category
-   cards) get a themed accent that falls back to lavender everywhere else. */
+/* Elements carrying data-theme="<category-key>" (category filter chips,
+   admin photo rows) get a themed accent that falls back to lavender
+   everywhere else. */
 [data-theme="wedding"] {
   --theme-accent: var(--color-wedding);
   --theme-accent-dark: var(--color-wedding-dark);
