@@ -89,12 +89,12 @@
   .filter-tabs {
     position: fixed;
     top: calc(var(--header-height) + 48px);
-    left: 32px;
+    left: 20px;
     z-index: 10;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    width: 160px;
+    width: 150px;
     gap: 2px;
     overflow-x: visible;
     padding-bottom: 0;
@@ -117,7 +117,22 @@
     border-left-color: var(--color-lavender-dark);
   }
 
+  /* Reserving 190px on the left (sidebar + breathing room) for the filter
+     column has to come from somewhere — grow max-width by that same
+     amount (1400 -> 1576) rather than letting it eat into the collage's
+     existing width budget. On screens >= ~1576px wide this fully restores
+     the original ~1372px content width (and therefore the original
+     column/bucket count), with the sidebar sitting in genuinely reclaimed
+     space rather than space stolen from the photos. Narrower desktop
+     windows (roughly 1025-1576px) still lose a bit of width to the
+     sidebar — there's a hard physical floor there (a persistent sidebar
+     and the pre-sidebar collage width can't both fit in less screen than
+     their sum requires), but this keeps that loss to a minimum and keeps
+     5 columns intact down to about a 1230px-wide window instead of losing
+     a column as early as ~1280px.
+  */
   .galleries-grid-section .container {
-    padding-left: 240px;
+    max-width: 1576px;
+    padding-left: 190px;
   }
 }
