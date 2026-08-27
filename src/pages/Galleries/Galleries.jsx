@@ -11,6 +11,18 @@ function resolveFilter(value) {
   return FILTERS.some((filter) => filter.key === value) ? value : "all";
 }
 
+// Unbiased shuffle (Fisher–Yates). Called once per fetch, not per render/
+// filter-toggle, so relative order stays stable while switching tabs and
+// only changes on a fresh page load.
+function shuffle(array) {
+  const result = array.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export default function Galleries() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeFilter, setActiveFilter] = useState(() =>
@@ -36,7 +48,7 @@ export default function Galleries() {
       })
       .then((data) => {
         if (cancelled) return;
-        setPhotos(data.photos || []);
+        setPhotos(shuffle(data.photos || []));
         setStatus("idle");
       })
       .catch(() => {
