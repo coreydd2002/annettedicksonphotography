@@ -57,6 +57,10 @@
   transform: scaleX(1);
 }
 
+.filter-toggle {
+  display: none;
+}
+
 .galleries-grid-section {
   padding-top: 0;
 }
@@ -78,6 +82,80 @@
   .filter-tabs {
     justify-content: flex-start;
     gap: 26px;
+  }
+}
+
+/* Mobile: the horizontal filter row is replaced by a funnel button that
+   reveals the same options as a dropdown panel, so the header above the
+   grid doesn't get crowded by a wall of category tabs. */
+@media (max-width: 768px) {
+  .filters-block {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+
+  .filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 1px solid var(--color-ink);
+    border-radius: 2px;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .filter-toggle-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .filter-tabs {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 200px;
+    max-width: calc(100vw - 48px);
+    gap: 2px;
+    overflow-x: visible;
+    padding: 8px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+  }
+
+  .filter-tabs.open {
+    display: flex;
+  }
+
+  .filter-tab {
+    padding: 10px 10px;
+    text-align: left;
+  }
+
+  .filter-tab::after {
+    content: none;
+  }
+
+  .filter-tab:hover,
+  .filter-tab.active {
+    background: var(--color-lavender-pale);
+    color: var(--color-ink);
   }
 }
 

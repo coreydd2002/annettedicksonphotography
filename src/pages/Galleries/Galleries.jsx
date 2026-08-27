@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import GalleryGrid from "../../components/GalleryGrid/GalleryGrid";
 import Lightbox from "../../components/Lightbox/Lightbox";
+import { IconFilter } from "../../components/icons";
 import { CATEGORIES } from "../../../shared/categories";
 import "./Galleries.css";
 
@@ -31,10 +32,12 @@ export default function Galleries() {
   const [photos, setPhotos] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | idle | error
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
 
   useEffect(() => {
     setActiveFilter(resolveFilter(searchParams.get("category")));
     setLightboxIndex(null);
+    setFilterMenuOpen(false);
   }, [searchParams]);
 
   useEffect(() => {
@@ -68,7 +71,10 @@ export default function Galleries() {
 
   const handleFilterChange = (key) => {
     setSearchParams(key === "all" ? {} : { category: key });
+    setFilterMenuOpen(false);
   };
+
+  const activeFilterLabel = FILTERS.find((filter) => filter.key === activeFilter)?.label;
 
   return (
     <>
@@ -82,25 +88,39 @@ export default function Galleries() {
             light.
           </p>
 
-          <div
-            className="filter-tabs"
-            role="tablist"
-            aria-label="Gallery category"
-          >
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.key}
-                type="button"
-                role="tab"
-                aria-selected={activeFilter === filter.key}
-                className={`filter-tab ${
-                  activeFilter === filter.key ? "active" : ""
-                }`}
-                onClick={() => handleFilterChange(filter.key)}
-              >
-                {filter.label}
-              </button>
-            ))}
+          <div className="filters-block">
+            <button
+              type="button"
+              className="filter-toggle"
+              aria-expanded={filterMenuOpen}
+              aria-controls="gallery-filters"
+              onClick={() => setFilterMenuOpen((open) => !open)}
+            >
+              <IconFilter className="filter-toggle-icon" />
+              {activeFilter === "all" ? "Filter" : `Filter: ${activeFilterLabel}`}
+            </button>
+
+            <div
+              id="gallery-filters"
+              className={`filter-tabs ${filterMenuOpen ? "open" : ""}`}
+              role="tablist"
+              aria-label="Gallery category"
+            >
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilter === filter.key}
+                  className={`filter-tab ${
+                    activeFilter === filter.key ? "active" : ""
+                  }`}
+                  onClick={() => handleFilterChange(filter.key)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
