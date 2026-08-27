@@ -112,17 +112,7 @@
   color: var(--color-lavender-dark);
 }
 
-.menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  padding: 8px;
-  margin: -8px;
-  color: var(--color-ink);
-  cursor: pointer;
-}
-
-.mobile-nav {
+.mobile-icon-nav {
   display: none;
 }
 
@@ -131,55 +121,60 @@
     height: var(--header-height-mobile);
   }
 
+  .brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding-bottom: 4px;
+  }
+
   .brand-name {
     font-size: 1.6rem;
+    white-space: nowrap;
+  }
+
+  .brand-suffix {
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    margin-top: -3px;
+    white-space: nowrap;
   }
 
   .brand-flourish {
-    width: 46px;
+    display: none;
+  }
+
+  .header-right {
+    gap: 4px;
   }
 
   .site-nav {
     display: none;
   }
 
-  .menu-toggle {
-    display: inline-flex;
+  .header-instagram-btn {
+    display: none;
   }
 
-  .mobile-nav {
+  .mobile-icon-nav {
     display: block;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 0;
-    overflow: hidden;
-    background: var(--color-white);
-    border-bottom: 1px solid var(--color-border);
-    transition: max-height 0.25s ease;
   }
 
-  .mobile-nav.open {
-    max-height: 260px;
-  }
-
-  .mobile-nav ul {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 24px 20px;
-  }
-
-  .mobile-nav .nav-link {
+  .mobile-icon-nav ul {
     display: flex;
     align-items: center;
-    min-height: 48px;
-    font-size: 0.85rem;
+    gap: 6px;
   }
-}
 
-@media (max-width: 380px) {
-  .brand-suffix {
-    display: none;
+  .mobile-icon-nav .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+  }
+
+  .mobile-nav-icon {
+    width: 22px;
+    height: 22px;
   }
 }

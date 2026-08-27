@@ -3,24 +3,19 @@ import { NavLink, useLocation } from "react-router-dom";
 import { NAV_LINKS, ADMIN_NAV_LINK, SITE } from "../../config";
 import { readAdminSession, onAdminSessionChange } from "../../adminSession";
 import { WooshLine } from "../decorations";
-import { IconMenu, IconClose, IconInstagram } from "../icons";
+import { IconInstagram, IconHome, IconImage, IconCalendar, IconEdit } from "../icons";
 import "./Header.css";
 
+const MOBILE_NAV_ICONS = {
+  "/": IconHome,
+  "/galleries": IconImage,
+  "/book-now": IconCalendar,
+  "/admin": IconEdit,
+};
+
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(() => Boolean(readAdminSession()));
   const location = useLocation();
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
 
   // Reacts immediately to sign-in/out (same tab, via a custom event — see
   // adminSession.js) rather than only picking it up on the next navigation.
@@ -71,28 +66,26 @@ export default function Header() {
             <IconInstagram className="header-instagram-icon" />
           </a>
 
-          <button
-            type="button"
-            className="menu-toggle"
-            aria-label="Toggle navigation"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            {menuOpen ? <IconClose /> : <IconMenu />}
-          </button>
+          <nav className="mobile-icon-nav" aria-label="Primary">
+            <ul>
+              {navLinks.map((link) => {
+                const Icon = MOBILE_NAV_ICONS[link.to];
+                return (
+                  <li key={link.to}>
+                    <NavLink
+                      to={link.to}
+                      end={link.to === "/"}
+                      className={navLinkClass}
+                      aria-label={link.label}
+                    >
+                      <Icon className="mobile-nav-icon" />
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         </div>
-      </div>
-
-      <div className={`mobile-nav ${menuOpen ? "open" : ""}`}>
-        <ul>
-          {navLinks.map((link) => (
-            <li key={link.to}>
-              <NavLink to={link.to} end={link.to === "/"} className={navLinkClass}>
-                {link.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
       </div>
     </header>
   );

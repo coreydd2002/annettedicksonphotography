@@ -4,6 +4,8 @@ export { default as IconChevronLeft } from "./IconChevronLeft";
 export { default as IconChevronRight } from "./IconChevronRight";
 export { default as IconImage } from "./IconImage";
 export { default as IconInstagram } from "./IconInstagram";
+export { default as IconHome } from "./IconHome";
+export { default as IconCalendar } from "./IconCalendar";
 export { default as IconEye } from "./IconEye";
 export { default as IconEyeOff } from "./IconEyeOff";
 export { default as IconEdit } from "./IconEdit";
