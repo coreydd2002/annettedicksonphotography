@@ -11,8 +11,10 @@ export const MIME_EXTENSIONS = {
 
 export const ALLOWED_CONTENT_TYPES = Object.keys(MIME_EXTENSIONS);
 
-// Vercel Blob has no meaningful size ceiling for photos (5TB max), so this
-// is a product choice, not a platform workaround: comfortably covers
-// full-resolution camera JPEGs (typically 5-15MB) while still catching an
-// accidentally-selected RAW/TIFF file.
+// This is the ceiling on the *input* file the admin selects, checked
+// before the browser downscales it (see src/pages/Admin/resizeImage.js) —
+// what actually lands in Blob is the ~1-2MB web-sized re-encode, not this.
+// 20MB comfortably covers full-resolution camera JPEGs (typically 5-15MB)
+// while still catching an accidentally-selected RAW/TIFF file, which would
+// also be too large for the browser to decode reliably.
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
